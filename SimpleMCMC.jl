@@ -10,7 +10,7 @@ module SimpleMCMC
     #  v2: Remove q0 from the main loop to improve efficiency
     #  v1: Turn it into a version that uses pure function(s)
 
-    function MetropolisHastings(data,lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
+    function MetropolisHastings(data, fixed, lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
         # Find the number of parameters
         numofparam = length(lop)
         # calc the n_samples
@@ -43,7 +43,7 @@ module SimpleMCMC
         end
 
         p_old = vec(p[1,:])
-        q0 = loglikelihood(data,p_old...) + sum([logpriorVec[k](p_old[k]) for k = 1:numofparam ])
+        q0 = loglikelihood(data,fixed,p_old...) + sum([logpriorVec[k](p_old[k]) for k = 1:numofparam ])
 
         # prepare the p_new array
         p_new = zeros(numofparam)
@@ -64,7 +64,7 @@ module SimpleMCMC
             # Calc the two posterior
             " q0 is posterior0 = likelihood0 * prior0        "
             " q1 is posterior1 = likelihood1 * prior1        "
-            q1 = loglikelihood(data,p_new...) + sum([logpriorVec[k](p_new[k]) for k = 1:numofparam ])
+            q1 = loglikelihood(data,fixed,p_new...) + sum([logpriorVec[k](p_new[k]) for k = 1:numofparam ])
             # The value of p[i] depends on whether the
             # random number is less than q1/q0
             p[i,:] .= log(rand()) < q1-q0 ? (q0=q1; p_old=p_new[:]) : p_old
