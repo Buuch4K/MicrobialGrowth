@@ -1,8 +1,4 @@
 module SimpleMCMC
-    export MetropolisHastings_MCMC
-    export Gibbs_MCMC
-    export describe_paramvec
-
     using Distributions, StatsPlots, Statistics, Printf
 
     # Version 6
@@ -13,7 +9,7 @@ module SimpleMCMC
     #  v2: Remove q0 from the main loop to improve efficiency
     #  v1: Turn it into a version that uses pure function(s)
 
-    function MetropolisHastings_MCMC(data,lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
+    function MetropolisHastings(data,lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
         # Find the number of parameters
         numofparam = length(lop)
         # calc the n_samples

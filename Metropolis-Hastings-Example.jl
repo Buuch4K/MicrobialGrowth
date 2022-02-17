@@ -1,5 +1,6 @@
 using Distributions, StatsPlots, Statistics
-using SimpleMCMC
+include("./SimpleMCMC.jl")
+using .SimpleMCMC
 
 function MCMC_example()
 
@@ -28,7 +29,7 @@ function MCMC_example()
         return result
     end
 
-    p = MetropolisHastings_MCMC(
+    p = SimpleMCMC.MetropolisHastings(
             data,
             ListOfParams,
             loglikelihood,
@@ -40,8 +41,8 @@ function MCMC_example()
     # this is the shape of the posterior produced by MCMC
     vec_mu=vec(p[:,1])  # Convert a Matrix column into a 1-D Vector
     vec_sigma=vec(p[:,2])  # Convert a Matrix column into a 1-D Vector
-    describe_paramvec("μ","mu",vec_mu)
-    describe_paramvec("sigma","sigma",vec_sigma)
+    SimpleMCMC.describe_paramvec("mu","mu",vec_mu)
+    SimpleMCMC.describe_paramvec("sigma","sigma",vec_sigma)
     histogram2d(vec_mu,vec_sigma,nbins=100,xlabel="mu",ylabel="sigma")
 end
 
