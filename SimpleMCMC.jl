@@ -1,4 +1,5 @@
 module SimpleMCMC
+
     using Distributions, StatsPlots, Statistics, Printf
 
     # Version 6
