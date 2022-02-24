@@ -10,7 +10,7 @@ module SimpleMCMC
     #  v2: Remove q0 from the main loop to improve efficiency
     #  v1: Turn it into a version that uses pure function(s)
 
-    function MetropolisHastings(data, fixed, lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
+    function MetropolisHastings(data, sizes, lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.001)
         # Find the number of parameters
         numofparam = length(lop)
         # calc the n_samples
@@ -43,7 +43,7 @@ module SimpleMCMC
         end
 
         p_old = vec(p[1,:])
-        q0 = loglikelihood(data,fixed,p_old...) + sum([logpriorVec[k](p_old[k]) for k = 1:numofparam ])
+        q0 = loglikelihood(data,sizes,p_old...) + sum([logpriorVec[k](p_old[k]) for k = 1:numofparam])
 
         # prepare the p_new array
         p_new = zeros(numofparam)
@@ -52,19 +52,19 @@ module SimpleMCMC
             # p_new has a value around the vicinity of p[i-1]
             for k = 1:numofparam  # for each parameter k
                 # p_new has a value around the vicinity of p[i-1]
-                p_new[k] = rand(  Normal( p[i-1,k] , JumpingWidthVec[k] )  )
+                p_new[k] = rand(Normal(p[i-1,k] , JumpingWidthVec[k]))
                 # make sure p_new is between lb and ub
                 if p_new[k] < lbVec[k]
-                    p_new[k] = lbVec[k] + abs( p_new[k] - lbVec[k] )
+                    p_new[k] = lbVec[k] + abs(p_new[k] - lbVec[k])
                 elseif p_new[k] > ubVec[k]
-                    p_new[k] = ubVec[k] - abs( p_new[k] - ubVec[k] )
+                    p_new[k] = ubVec[k] - abs(p_new[k] - ubVec[k])
                 end
             end
 
             # Calc the two posterior
             " q0 is posterior0 = likelihood0 * prior0        "
             " q1 is posterior1 = likelihood1 * prior1        "
-            q1 = loglikelihood(data,fixed,p_new...) + sum([logpriorVec[k](p_new[k]) for k = 1:numofparam ])
+            q1 = loglikelihood(data,sizes,p_new...) + sum([logpriorVec[k](p_new[k]) for k = 1:numofparam ])
             # The value of p[i] depends on whether the
             # random number is less than q1/q0
             p[i,:] .= log(rand()) < q1-q0 ? (q0=q1; p_old=p_new[:]) : p_old
