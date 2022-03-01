@@ -94,20 +94,20 @@ x0 = 0.725; #initial size
 
 #generating the first dataset
 size, div_time, para_init = generate_data(x0,N);
-plot_survival(range(0,1,100), size[8], para_init[1], para_init[2], para_init[3], para_init[4])
+plot_survival(range(0,1,10), size[8], para_init[1], para_init[2], para_init[3], para_init[4])
 
 log_likeli(div_time,size,para_init[1],para_init[2],para_init[3], para_init[4])
 
 plot_data(div_time,size,para_init[1])
 
 #define prior Distributions
-u = LogNormal(log(0.6)-1^2/2,1); # mu = 0.8, sigma = 1
-v = LogNormal(log(2.0)-1^2/2,1);
-omega1 = LogNormal(log(1.0)-1^2/2,1);
-omega2 = LogNormal(log(0.5)-1^2/2,1);
+u = LogNormal(log(0.8)-1/2,1); # mu = 0.8, sigma = 1
+v = LogNormal(log(0.8)-1/2,1);
+omega1 = LogNormal(log(0.8)-1/2,1);
+omega2 = LogNormal(log(0.8)-1/2,1);
 para = Distribution[omega1,omega2,u,v]
 
-# plot(u, xlim=(0,10), ylim=(0, 2), yflip = false)
+# plot(u, xlim=(0,10), ylim=(0, 0.5), yflip = false)
 
 #applying the MH algo for the posterior Distribution
 p = SimpleMCMC.MetropolisHastings(div_time, size, para, log_likeli, samples = 10000, burnedinsamples = 1000);
