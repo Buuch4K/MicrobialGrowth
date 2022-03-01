@@ -31,7 +31,7 @@ function generate_data(size_of_cell,N)
         end
         fx = ZeroProblem(f, 1)
         push!(Y, solve(fx) + t0)
-        next_size = X[n]/2 * exp(o1_init*Y[n])
+        next_size = (X[n] * exp(o1_init*Y[n]))/2
         push!(X, next_size)
     end
     return (X, Y, init_para)
@@ -54,6 +54,22 @@ function plot_survival(t,s,o1,o2,lb,ub)
 end
 
 
+function plot_data(Y,X,alpha)
+    t = Array{Float64}(undef,N*10);
+    result = Array{Float64}(undef,N*10);
+    for k = 1:N
+        temp = Array{Float64}(undef,10);
+        for j = 1:10
+            temp[j] = X[k]*exp(alpha*(j*Y[k])/10) 
+        end
+        start = sum(Y[1:(k-1)])
+        t[(k-1)*10+1:k*10] = range(start,start+Y[k],10)
+        result[(k-1)*10+1:k*10] = temp
+    end
+    plot(t,result)
+end
+
+
 function log_likeli(time,s,o1,o2,lb,ub)
     #=
         This function computes the likelihood for an observation Y given the initial parameters (theta, xi) 
@@ -73,7 +89,7 @@ function log_likeli(time,s,o1,o2,lb,ub)
 end
 
 # initial parameters for the data generation
-N = 100; #number of observations
+N = 10; #number of observations
 x0 = 0.725; #initial size
 
 #generating the first dataset
@@ -81,6 +97,8 @@ size, div_time, para_init = generate_data(x0,N);
 plot_survival(range(0,1,100), size[8], para_init[1], para_init[2], para_init[3], para_init[4])
 
 log_likeli(div_time,size,para_init[1],para_init[2],para_init[3], para_init[4])
+
+plot_data(div_time,size,para_init[1])
 
 #define prior Distributions
 u = LogNormal(log(0.6)-1^2/2,1); # mu = 0.8, sigma = 1
