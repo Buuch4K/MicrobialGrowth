@@ -49,10 +49,9 @@ module SimpleMCMC
         p_new = zeros(numofparam)
         # Main loop for MetropolisHastings MCMC
         for i = 2:n_samples
-            # p_new has a value around the vicinity of p[i-1]
             for k = 1:numofparam  # for each parameter k
                 # p_new has a value around the vicinity of p[i-1]
-                p_new[k] = rand(LogNormal(p[i-1,k] , JumpingWidthVec[k]))
+                p_new[k] = rand(Normal(p[i-1,k] , JumpingWidthVec[k]))
                 # make sure p_new is between lb and ub
                 if p_new[k] < lbVec[k]
                     p_new[k] = lbVec[k] + abs(p_new[k] - lbVec[k])
