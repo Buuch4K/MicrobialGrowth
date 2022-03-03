@@ -1,7 +1,6 @@
-using Roots, Distributions, Random, Statistics, StatsPlots, Plots
+using Roots, Distributions, Statistics, StatsPlots, Plots
 include("./SimpleMCMC.jl")
 using .SimpleMCMC
-# Random.seed!(4)
 
 
 function generate_data(size_of_cell,N)
@@ -77,11 +76,8 @@ function log_likeli(time,s,o1,o2,lb,ub)
     check = zeros(N)
     like = 0.0;
     for k in 1:length(time)
-        if s[k] < lb
-            temp = ((ub*o2)/(ub+lb) + (s[k]*o2)/(ub+lb)*exp(o1*time[k]))* exp((o2/(ub+lb))*(lb/o1 - (s[k]*exp(o1*time[k]))/o1 - ub*time[k] + ub*1/o1*log(lb/s[k])))
-        else
-            temp = ((ub*o2)/(ub+lb) + (s[k]*o2)/(ub+lb)*exp(o1*time[k]))* exp((o2/(ub+lb))*(s[k]/o1 - (s[k]*exp(o1*time[k]))/o1 - ub*time[k]))
-        end
+        t0 = max(0.0,1/o1*log(lb/s[k]))
+        temp = ((ub*o2)/(ub+lb) + (s[k]*o2)/(ub+lb)*exp(o1*time[k]))* exp((o2/(ub+lb))*((s[k]*exp(o1*t0))/o1 - (s[k]*exp(o1*time[k]))/o1 - ub*time[k] + ub*t0))
         check[k] = temp;
         like += log(temp)
     end
