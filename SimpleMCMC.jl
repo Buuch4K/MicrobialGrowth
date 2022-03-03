@@ -10,7 +10,7 @@ module SimpleMCMC
     #  v2: Remove q0 from the main loop to improve efficiency
     #  v1: Turn it into a version that uses pure function(s)
 
-    function MetropolisHastings(data, sizes, lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.001)
+    function MetropolisHastings(data, sizes, lop::Vector{Distribution},loglikelihood;samples,burnedinsamples,JumpingWidth=0.01)
         # Find the number of parameters
         numofparam = length(lop)
         # calc the n_samples
