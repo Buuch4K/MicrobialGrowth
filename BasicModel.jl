@@ -1,6 +1,4 @@
-using Roots, Distributions, Statistics, StatsPlots, Plots
-include("./SimpleMCMC.jl")
-using .SimpleMCMC
+using Roots, Distributions, Statistics, StatsPlots, Plots, AffineInvariantMCMC
 
 
 function generate_data(size_of_cell,N)
@@ -11,109 +9,99 @@ function generate_data(size_of_cell,N)
             Y: vector of all observed division times (tau1,...,tauN)
             init_para: initial values of all parameters
     =#
-    u_init = 0.6; #lower treshhold for division
-    v_init = 2.0; #upper treshhold for division
-    o1_init = 1.0; #exponential growth rate
-    o2_init = 0.5; #hazard rate functions constant    
-    init_para = [o1_init,o2_init,u_init,v_init];
-    
     X = Float64[size_of_cell]; #sizes of the cell at division
     Y = Float64[]; #division times
-    k = rand(Uniform(0,1),N)
+    k = rand(Uniform(0,1),N);
     for n = 1:N
-        if X[n] < u_init
-            t0 = 1/o1_init*log(u_init/X[n])
-            f = t -> log(k[n]) + o2_init/(v_init+u_init)*((u_init)/o1_init*exp(o1_init*t) + v_init*t - u_init/o1_init)
+        if X[n] < u
+            t0 = 1/o1*log(u/X[n])
+            f = t -> log(k[n]) + o2/(v+u)*((u)/o1*exp(o1*t) + v*t - u/o1)
         else
             t0 = 0
-            f = t -> log(k[n]) + o2_init/(v_init+u_init)*(X[n]/o1_init*exp(o1_init*t) + v_init*t - X[n]/o1_init)
+            f = t -> log(k[n]) + o2/(v+u)*(X[n]/o1*exp(o1*t) + v*t - X[n]/o1)
         end
         fx = ZeroProblem(f, 1)
         push!(Y, solve(fx) + t0)
-        next_size = (X[n] * exp(o1_init*Y[n]))/2
+        next_size = (X[n] * exp(o1*Y[n]))/2
         push!(X, next_size)
     end
-    return (X, Y, init_para)
+    return (Y,X)
 end
 
 
-function plot_survival(t,s,o1,o2,lb,ub)
+function plot_survival(t,s)
     result = Array{Float64}(undef,length(t));
-    if s < lb
+    if s < u
         for k = 1:length(t)
-            temp = exp(-o2/(ub+lb)*(lb/o1*exp(o1*t[k]) + ub*t[k] - lb/o1 - ub*1/o1*log(lb/s)))
+            temp = exp(-o2/(v+u)*(u/o1*exp(o1*t[k]) + v*t[k] - u/o1 - v*1/o1*log(u/s)))
             result[k] = min(1,temp)
         end
     else
         for k = 1:length(t)
-            result[k] = exp(-o2/(ub+lb)*(s/o1*exp(o1*t[k]) + ub*t[k] - s/o1))
+            result[k] = exp(-o2/(v+u)*(s/o1*exp(o1*t[k]) + v*t[k] - s/o1))
         end
     end
     scatter(t,result)
 end
 
 
-function plot_data(Y,X,alpha)
+function plot_data(Y,X)
     t = Array{Float64}(undef,N*10);
     result = Array{Float64}(undef,N*10);
     for k = 1:N
-        temp = Array{Float64}(undef,10);
-        for j = 1:10
-            temp[j] = X[k]*exp(alpha*(j*Y[k])/10) 
-        end
         start = sum(Y[1:(k-1)])
         t[(k-1)*10+1:k*10] = range(start,start+Y[k],10)
-        result[(k-1)*10+1:k*10] = temp
+        result[(k-1)*10+1:k*10] = X[k] .* exp.(o1*range(0,Y[k],10)) 
     end
     plot(t,result)
 end
 
 
-function log_likeli(time,s,o1,o2,lb,ub)
+function log_likeli(time,s,para::Vector)
     #=
         This function computes the likelihood for an observation Y given the initial parameters (theta, xi) 
     =#
-    check = zeros(N)
     like = 0.0;
     for k in 1:length(time)
-        t0 = max(0.0,1/o1*log(lb/s[k]))
-        temp = ((ub*o2)/(ub+lb) + (s[k]*o2)/(ub+lb)*exp(o1*time[k]))* exp((o2/(ub+lb))*((s[k]*exp(o1*t0))/o1 - (s[k]*exp(o1*time[k]))/o1 - ub*time[k] + ub*t0))
-        check[k] = temp;
+        t0 = max(0.0,1/para[1]*log(para[3]/s[k]))
+        temp = ((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) * exp((para[2]/(para[4]+para[3]))*((s[k]*exp(para[1]*t0))/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k] + para[4]*t0))
         like += log(temp)
     end
     return like
 end
 
+function log_prior(para::Vector)
+    return sum([logpdf(LogNormal(log(0.8)-1/2,1),para[k]) for k = 1:length(para)])
+end
+
+
 # initial parameters for the data generation
-N = 10; #number of observations
-x0 = 0.725; #initial size
+const N = 10; #number of observations
+const m0 = 8; #initial size
+const u = 0.6; #lower treshhold for division
+const v= 2.0; #upper treshhold for division
+const o1 = 1.0; #exponential growth rate
+const o2 = 0.5; #hazard rate functions constant
 
 #generating the first dataset
-size, div_time, para_init = generate_data(x0,N);
-plot_survival(range(0,1,10), size[8], para_init[1], para_init[2], para_init[3], para_init[4])
+div_time, mass = generate_data(m0,N);
+plot_data(div_time,mass)
 
-log_likeli(div_time,size,para_init[1],para_init[2],para_init[3], para_init[4])
+plot_survival(range(0,1,10), mass[8])
 
-plot_data(div_time,size,para_init[1])
+log_likeli(div_time,mass,[o1,o2,u,v])
 
-#define prior Distributions
-u = LogNormal(log(0.8)-1/2,1); # mu = 0.8, sigma = 1
-v = LogNormal(log(0.8)-1/2,1);
-omega1 = LogNormal(log(0.8)-1/2,1);
-omega2 = LogNormal(log(0.8)-1/2,1);
-para = Distribution[omega1,omega2,u,v]
-
-# plot(u, xlim=(0,10), ylim=(0, 0.5), yflip = false)
 
 #applying the MH algo for the posterior Distribution
-p = SimpleMCMC.MetropolisHastings(div_time, size, para, log_likeli, samples = 10000, burnedinsamples = 1000);
-SimpleMCMC.describe_paramvec("omega1","omega1",vec(p[:,1]))
-SimpleMCMC.describe_paramvec("omega2","omega2",vec(p[:,2]))
-SimpleMCMC.describe_paramvec("u","u",vec(p[:,3]))
-SimpleMCMC.describe_paramvec("v","v",vec(p[:,4]))
+numdims = 4; numwalkers = 100; thinning = 10; numsamples_perwalker = 1000; burnin = 100;
+log_like_prior = t -> log_likeli(div_time,mass,t)+log_prior(t)
 
-corrplot(p[:,3:4])
+x = rand(LogNormal(log(0.8)-1/2,1),numdims,numwalkers); # define initial point drawn from LogNormal for each parameter
+chain, llhoodvals = AffineInvariantMCMC.sample(log_like_prior,numwalkers,x,burnin,1);
+chain, llhoodvals = AffineInvariantMCMC.sample(log_like_prior,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
+histogram(flatchain[1,1:100])
 
 
 
