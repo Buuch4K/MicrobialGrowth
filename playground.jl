@@ -11,16 +11,17 @@ println("One root is $x0")
 println("Another method yields to the root $x1")
 
 
-import AffineInvariantMCMC
+using AffineInvariantMCMC, Statistics, Plots, Random, Distributions, RobustPmap
 
-numdims = 5
-numwalkers = 100
-thinning = 10
-numsamples_perwalker = 1000
-burnin = 100
+numdims = 5;
+numwalkers = 100;
+thinning = 10;
+numsamples_perwalker = 100;
+burnin = 100;
 
-const stds = exp.(5 * randn(numdims))
-const means = 1 .+ 5 * rand(numdims)
+const stds = exp.(5 * randn(numdims));
+const means = 1 .+ 5 * rand(numdims);
+
 llhood = x->begin
 	retval = 0.
 	for i in 1:length(x)
@@ -28,7 +29,13 @@ llhood = x->begin
 	end
 	return retval
 end
+
 x0 = rand(numdims, numwalkers) * 10 .- 5
-chain, llhoodvals = AffineInvariantMCMC.sample(llhood, numwalkers, x0, burnin, 1)
-chain, llhoodvals = AffineInvariantMCMC.sample(llhood, numwalkers, chain[:, :, end], numsamples_perwalker, thinning)
-flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain, llhoodvals)
+chain, llhoodvals = AffineInvariantMCMC.sample(llhood, numwalkers, x0, burnin, 1);
+chain, llhoodvals = AffineInvariantMCMC.sample(llhood, numwalkers, chain[:, :, end], numsamples_perwalker, thinning);
+flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain, llhoodvals);
+
+
+histogram(flatchain[1,:])
+mean(flatchain[1,:])
+means[1]
