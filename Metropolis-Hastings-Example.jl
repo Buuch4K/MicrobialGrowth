@@ -21,9 +21,8 @@ function MCMC_example()
     # The loglikelihood function which returns the log(probability),
     # given a fixed mu and a fixed sigma, of the sequence of datapoints
     function loglikelihood(data::Vector,mu,sigma)
-        numofdatapoints = length(data)
         result=0.0
-        for k = 1:numofdatapoints
+        for k = 1:length(data)
             result += logpdf(Normal(mu,sigma),data[k])
         end
         return result
