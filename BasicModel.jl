@@ -89,7 +89,7 @@ const N = 10; #number of observations
 const m0 = 8.; #initial size
 
 const u = 0.6; #lower treshhold for division
-const v= 2.; #upper treshhold for division
+const v = 2.; #upper treshhold for division
 const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
 
@@ -97,11 +97,11 @@ const pri = Uniform(0,10); #define prior distribution with mean 2 and sd 1
 
 # generating the first dataset
 div_time, mass = generate_data(m0,N);
-plot_data(div_time,mass)
+# plot_data(div_time,mass)
 
-plot_survival(range(0,1,10), mass[8])
+# plot_survival(range(0,1,10), mass[8])
 
-log_likeli(div_time,mass,[o1,o2,u,v])
+# log_likeli(div_time,mass,[o1,o2,u,v])
 
 
 # applying the MH algo for the posterior Distribution
@@ -115,5 +115,5 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodval
 
 
 plot(flatchain[1,:])
-plot(flatllhoodvals)
-histogram(flatchain[1,:], xlims = [0,3])
+# plot(flatllhoodvals)
+# histogram(flatchain[1,:], xlims = [0,3])
