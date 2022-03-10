@@ -25,3 +25,7 @@ Manifest.toml
 .DS_Store
 Metropolis-Hastings-Example.jl
 SimpleMCMC.jl
+
+
+# ignoring all plots
+*.png
