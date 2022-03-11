@@ -68,7 +68,11 @@ function log_posterior(time,s,para::Vector)
         for k in 1:length(time)
             if s[k] < para[3]
                 t0 = 1/para[1]*log(para[3]/s[k]);
-                temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(para[3]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k] + para[4]*t0))
+                if time[k] < t0
+                    return -Inf # division cannot happen until s >= u
+                else
+                    temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(para[3]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k] + para[4]*t0))
+                end
             else
                 temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(s[k]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k]))
             end
@@ -85,7 +89,7 @@ end
 
 
 # initial parameters for the data generation
-const N = 10; #number of observations
+const N = 250; #number of observations
 const m0 = 8.; #initial size
 
 const u = 0.6; #lower treshhold for division
@@ -97,7 +101,7 @@ const pri = Uniform(0,10); #define prior distribution with mean 2 and sd 1
 
 # generating the first dataset
 div_time, mass = generate_data(m0,N);
-# plot_data(div_time,mass)
+plot_data(div_time,mass)
 
 # plot_survival(range(0,1,10), mass[8])
 
@@ -105,8 +109,8 @@ div_time, mass = generate_data(m0,N);
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 2; numwalkers = 100; thinning = 10; numsamples_perwalker = 1000; burnin = 1000;
-loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],0.6,2.]);
+numdims = 3; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
+loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],x[3],2.]);
 
 x = rand(pri,numdims,numwalkers); # define initial points for parameters
 chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
@@ -114,6 +118,6 @@ chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,chain[:, :, e
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
 
-plot(flatchain[1,:])
+plot(plot(flatchain[1,:]),plot(flatchain[2,:]),plot(flatchain[3,:]);layout = (numdims,1))
 # plot(flatllhoodvals)
 # histogram(flatchain[1,:], xlims = [0,3])
