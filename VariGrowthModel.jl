@@ -44,12 +44,16 @@ function log_posterior(Y,X,para::Vector)
         like = 0.;
         for k = 1:size(Y,1)
             if X[k] < para[3]
-                t0 = 1/para[1]*log(para[3]/X[k]);
-                temp = 0
+                t0 = 1/Y[k,2]*log(para[3]/X[k]);
+                if time[k] < t0
+                    return -Inf
+                else
+                    temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(Y[k,2]*Y[k,1])) + ((para[2]/(para[4]+para[3]))*(para[3]/Y[k,2] - (s[k]*exp(Y[k,2]*Y[k,1]))/Y[k,2] - para[4]*Y[k,1] + para[4]*t0))
+                end
             else
-                temp = 0
+                temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(Y[k,2]*Y[k,1])) + ((para[2]/(para[4]+para[3]))*(s[k]/Y[k,2] - (s[k]*exp(Y[k,2]*Y[k,1]))/Y[k,2] - para[4]*Y[k,1]))
             end
-            like += log(temp)
+            like += temp
         end
         return like + sum([logpdf(pri,para[k]) for k=1:length(para)])
     end
@@ -75,3 +79,5 @@ const pri = Uniform(2,1); #prior distribution with mean 2 and sd 1
 
 data, mass = generate_data(m0,N);
 plot_data(data,mass)
+
+
