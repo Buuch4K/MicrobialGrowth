@@ -1,4 +1,4 @@
-using Roots, Distributions, Statistics, StatsPlots, Plots, AffineInvariantMCMC
+using Roots, Distributions, Statistics, StatsPlots, Plots, AffineInvariantMCMC, CSV
 
 
 function generate_data(size_of_cell,N)
@@ -25,7 +25,23 @@ function generate_data(size_of_cell,N)
         next_size = (X[n] * exp(o1*Y[n]))/2
         push!(X, next_size)
     end
-    return (Y,X)
+    return (Y,X[1:N])
+end
+
+
+function read_data(filename::String)
+    data = CSV.File(filename,select=["lineage_ID", "generationtime","length_birth","growth_rate"]);
+    s = Float64[]
+    t = Float64[]
+    index = Int64[]
+    for k = 1:length(data.lineage_ID)
+        if data.lineage_ID[k] == 15.
+            push!(index,k)
+            push!(t, data.generationtime[k])
+            push!(s,data.length_birth[k])
+        end
+    end
+    return t,s,mean(data.growth_rate[index[1]:index[end]])
 end
 
 
@@ -45,13 +61,13 @@ function plot_survival(t,s)
 end
 
 
-function plot_data(Y,X)
-    t = Array{Float64}(undef,N*10);
-    result = Array{Float64}(undef,N*10);
-    for k = 1:N
+function plot_data(Y,X,growth = 1)
+    t = Array{Float64}(undef,length(Y)*10);
+    result = Array{Float64}(undef,length(Y)*10);
+    for k = 1:length(Y)
         start = sum(Y[1:(k-1)])
         t[(k-1)*10+1:k*10] = range(start,start+Y[k],10)
-        result[(k-1)*10+1:k*10] = X[k] .* exp.(o1*range(0,Y[k],10)) 
+        result[(k-1)*10+1:k*10] = X[k] .* exp.(growth*range(0,Y[k],10)) 
     end
     plot(t,result)
 end
@@ -88,20 +104,25 @@ function log_prior(para::Vector)
 end
 
 
-# initial parameters for the data generation
-const N = 250; #number of observations
-const m0 = 8.; #initial size
-
-const u = 0.6; #lower treshhold for division
-const v = 2.; #upper treshhold for division
-const o1 = 1.; #exponential growth rate
-const o2 = 0.5; #hazard rate functions constant
 
 const pri = Uniform(0,10); #define prior distribution with mean 2 and sd 1
+generate = false;
+if generate
+    # initial parameters for the data generation
+    const N = 250; #number of observations
+    const m0 = 8.; #initial size
 
-# generating the first dataset
-div_time, mass = generate_data(m0,N);
-plot_data(div_time,mass)
+    const u = 0.6; #lower treshhold for division
+    const v = 2.; #upper treshhold for division
+    const o1 = 1.; #exponential growth rate
+    const o2 = 0.5; #hazard rate functions constant
+    div_time, mass = generate_data(m0,N);
+else
+    div_time,mass,rate = read_data("data/Susman18_physical_units.csv"); # read data fram csv file
+    
+end
+
+plot_data(div_time,mass,rate)
 
 # plot_survival(range(0,1,10), mass[8])
 
@@ -109,8 +130,8 @@ plot_data(div_time,mass)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
-loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],x[3],2.]);
+numdims = 1; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
+loglhood = x -> log_posterior(div_time,mass,[x[1],0.9,0.3,1.]);
 
 x = rand(pri,numdims,numwalkers); # define initial points for parameters
 chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
@@ -118,6 +139,7 @@ chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,chain[:, :, e
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
 
-plot(plot(flatchain[1,:]),plot(flatchain[2,:]),plot(flatchain[3,:]);layout = (numdims,1))
+plot(flatchain[1,:])
+# plot(plot(flatchain[1,:]),plot(flatchain[2,:]),plot(flatchain[3,:]);layout = (3,1))
 # plot(flatllhoodvals)
 # histogram(flatchain[1,:], xlims = [0,3])
