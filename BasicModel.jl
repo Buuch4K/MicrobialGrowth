@@ -29,13 +29,13 @@ function generate_data(size_of_cell,N)
 end
 
 
-function read_data(filename::String)
+function read_data(lineage::Float64,filename::String)
     data = CSV.File(filename,select=["lineage_ID", "generationtime","length_birth","growth_rate"]);
     s = Float64[]
     t = Float64[]
     index = Int64[]
     for k = 1:length(data.lineage_ID)
-        if data.lineage_ID[k] == 15.
+        if data.lineage_ID[k] == lineage
             push!(index,k)
             push!(t, data.generationtime[k])
             push!(s,data.length_birth[k])
@@ -118,7 +118,7 @@ if generate
     const o2 = 0.5; #hazard rate functions constant
     div_time, mass = generate_data(m0,N);
 else
-    div_time,mass,rate = read_data("data/Susman18_physical_units.csv"); # read data fram csv file
+    div_time,mass,rate = read_data(15.,"data/Susman18_physical_units.csv"); # read data fram csv file
     
 end
 
@@ -130,8 +130,8 @@ plot_data(div_time,mass,rate)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 1; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
-loglhood = x -> log_posterior(div_time,mass,[x[1],0.9,0.3,1.]);
+numdims = 2; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
+loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],0.3,1.]);
 
 x = rand(pri,numdims,numwalkers); # define initial points for parameters
 chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
