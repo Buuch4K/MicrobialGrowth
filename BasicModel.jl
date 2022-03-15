@@ -12,17 +12,17 @@ function generate_data(size_of_cell,N)
     X = Float64[size_of_cell]; #sizes of the cell at division
     Y = Float64[]; #division times
     k = rand(Uniform(0,1),N);
-    for n = 1:N
-        if X[n] < u
-            t0 = 1/o1*log(u/X[n])
-            f = t -> log(k[n]) + o2/(v+u)*(u/o1*exp(o1*t) + v*t - u/o1)
+    for i = 1:N
+        if X[i] < u
+            t0 = 1/o1*log(u/X[i])
+            f = t -> log(k[i]) + o2/(v+u)*(u/o1*exp(o1*t) + v*t - u/o1)
         else
             t0 = 0.
-            f = t -> log(k[n]) + o2/(v+u)*(X[n]/o1*exp(o1*t) + v*t - X[n]/o1)
+            f = t -> log(k[i]) + o2/(v+u)*(X[i]/o1*exp(o1*t) + v*t - X[i]/o1)
         end
         fx = ZeroProblem(f, 1)
         push!(Y, solve(fx) + t0)
-        next_size = (X[n] * exp(o1*Y[n]))/2
+        next_size = (X[i] * exp(o1*Y[i]))/2
         push!(X, next_size)
     end
     return (Y,X[1:N])
@@ -30,7 +30,7 @@ end
 
 
 function read_data(lineage::Float64,filename::String)
-    data = CSV.File(filename,select=["lineage_ID", "generationtime","length_birth","growth_rate"]);
+    data = CSV.File(filename,select=["lineage_ID","generationtime","length_birth","growth_rate"]);
     s = Float64[]
     t = Float64[]
     index = Int64[]
@@ -104,6 +104,28 @@ function log_prior(para::Vector)
 end
 
 
+function check_sample(chain,size_of_cell,n)
+    omega1, omega2, lb = mean(chain, dims=2);
+    X = Float64[size_of_cell]; #sizes of the cell at division
+    Y = Float64[]; #division times
+    k = rand(Uniform(0,1),n);
+    for i = 1:n
+        if X[i] < lb
+            t0 = 1/omega1*log(lb/X[i])
+            f = t -> log(k[i]) + omega2/(v+lb)*(lb/omega1*exp(omega1*t) + v*t - lb/omega1)
+        else
+            t0 = 0.
+            f = t -> log(k[i]) + omega2/(v+lb)*(X[i]/omega1*exp(omega1*t) + v*t - X[i]/omega1)
+        end
+        fx = ZeroProblem(f, 1)
+        push!(Y, solve(fx) + t0)
+        next_size = (X[i] * exp(omega1*Y[i]))/2
+        push!(X, next_size)
+    end
+    return Y,X
+end
+
+
 
 const pri = Uniform(0,10); #define prior distribution with mean 2 and sd 1
 generate = false;
@@ -113,13 +135,13 @@ if generate
     const m0 = 8.; #initial size
 
     const u = 0.6; #lower treshhold for division
-    const v = 2.; #upper treshhold for division
+    const v = 1.; #upper treshhold for division
     const o1 = 1.; #exponential growth rate
     const o2 = 0.5; #hazard rate functions constant
     div_time, mass = generate_data(m0,N);
 else
     div_time,mass,rate = read_data(15.,"data/Susman18_physical_units.csv"); # read data fram csv file
-    
+    const v = 1.;
 end
 
 plot_data(div_time,mass,rate)
@@ -130,16 +152,16 @@ plot_data(div_time,mass,rate)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 2; numwalkers = 100; thinning = 100; numsamples_perwalker = 1000; burnin = 1000;
-loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],0.3,1.]);
+numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],x[3],v]);
 
 x = rand(pri,numdims,numwalkers); # define initial points for parameters
 chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
+corrplot(transpose(flatchain))
+plot(flatllhoodvals)
 
-plot(flatchain[1,:])
-# plot(plot(flatchain[1,:]),plot(flatchain[2,:]),plot(flatchain[3,:]);layout = (3,1))
-# plot(flatllhoodvals)
-# histogram(flatchain[1,:], xlims = [0,3])
+sampled_time, sampled_mass = check_sample(flatchain,mass[1],length(div_time))
+plot_data(sampled_time,sampled_mass)
