@@ -105,6 +105,7 @@ end
 
 
 function check_sample(chain,size_of_cell,n)
+    # generates a data set with parameters sampled from a chain
     omega1, omega2, lb = mean(chain, dims=2);
     X = Float64[size_of_cell]; #sizes of the cell at division
     Y = Float64[]; #division times
