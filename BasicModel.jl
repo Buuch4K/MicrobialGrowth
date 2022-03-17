@@ -127,18 +127,17 @@ function check_sample(chain,size_of_cell,n)
 end
 
 
-
+const u = 0.6; #lower treshhold for division
+const v = 1.; #upper treshhold for division
+const o1 = 1.; #exponential growth rate
+const o2 = 0.5; #hazard rate functions constant
 const pri = Uniform(0,10); #define prior distribution
-generate = false;
+generate = true;
 if generate
     # initial parameters for the data generation
-    const N = 250; #number of observations
-    const m0 = 8.; #initial size
+    N = 250; #number of observations
+    m0 = 8.; #initial size
 
-    const u = 0.6; #lower treshhold for division
-    const v = 1.; #upper treshhold for division
-    const o1 = 1.; #exponential growth rate
-    const o2 = 0.5; #hazard rate functions constant
     div_time, mass = generate_data(m0,N);
 else
     div_time,mass,rate = read_data(15.,"data/Susman18_physical_units.csv"); # read data fram csv file
