@@ -128,7 +128,7 @@ end
 
 
 
-const pri = Uniform(0,10); #define prior distribution with mean 2 and sd 1
+const pri = Uniform(0,10); #define prior distribution
 generate = false;
 if generate
     # initial parameters for the data generation
