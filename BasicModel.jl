@@ -73,34 +73,32 @@ function plot_data(Y,X,growth = 1)
 end
 
 
-function log_posterior(time,s,para::Vector)
-    #=
-        This function computes the likelihood for an observation Y given the initial parameters (theta, xi) 
-    =#
+function log_likeli(time,s,para::Vector)
+    # para = [o1,o2,v,u]
     if any(x-> x.<0,para)
         return -Inf
     else
         like = 0.;
         for k in 1:length(time)
-            if s[k] < para[3]
-                t0 = 1/para[1]*log(para[3]/s[k]);
+            if s[k] < para[4]
+                t0 = 1/para[1]*log(para[4]/s[k]);
                 if time[k] < t0
                     return -Inf # division cannot happen until s >= u
                 else
-                    temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(para[3]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k] + para[4]*t0))
+                    temp = log((para[3]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(para[4]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[3]*time[k] + para[3]*t0))
                 end
             else
-                temp = log((para[4]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(s[k]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[4]*time[k]))
+                temp = log((para[3]*para[2])/(para[4]+para[3]) + (s[k]*para[2])/(para[4]+para[3])*exp(para[1]*time[k])) + ((para[2]/(para[4]+para[3]))*(s[k]/para[1] - (s[k]*exp(para[1]*time[k]))/para[1] - para[3]*time[k]))
             end
             like += temp
         end
-        return like + sum([logpdf(pri,para[k]) for k = 1:length(para)])
+        return like
     end
 end
 
 
 function log_prior(para::Vector)
-    return sum([logpdf(pri,para[k]) for k = 1:length(para)])
+    return sum([logpdf(pri,para[k]) for k = 1:length(para)-1]) + logpdf(pri_u,para[end])
 end
 
 
@@ -131,8 +129,10 @@ const u = 0.6; #lower treshhold for division
 const v = 1.; #upper treshhold for division
 const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
-const pri = Uniform(0,10); #define prior distribution
-generate = false;
+const pri = Uniform(0,2); #define prior distribution for o1, o2, and v
+const pri_u = Uniform(0,v); #define prior distribution for u depending on v
+
+generate = true;
 if generate
     # initial parameters for the data generation
     N = 250; #number of observations
@@ -147,12 +147,13 @@ plot_data(div_time,mass,rate)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-loglhood = x -> log_posterior(div_time,mass,[x[1],x[2],x[3],v]);
+numdims = 4; numwalkers = 100; thinning = 10; numsamples_perwalker = 2000; burnin = 1000;
+logpost = x -> log_likeli(div_time,mass,x)+log_prior(x);
 
-x = rand(pri,numdims,numwalkers); # define initial points for parameters
-chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+# x = rand(pri,numdims,numwalkers); # define initial points with all same prior
+x = vcat(rand(pri,numdims-1,numwalkers),rand(pri_u,1,numwalkers)); #define initial point with regard to prior of u
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
 corrplot(transpose(flatchain))

@@ -55,44 +55,46 @@ function plot_data(D::Data)
 end
 
 
-function log_posterior(D::Data,para::Vector)
+function log_likeli(D::Data,para::Vector)
+    # para = [o1,sig,o2,v,u]
     if any(x->x.<0,para)
         return -Inf
     else
         like = 0.;
         for k = 1:length(D.time)
-            if D.mass[k] < para[3]
-                t0 = 1/D.growth[k]*log(para[3]/D.mass[k]);
+            if D.mass[k] < para[5]
+                t0 = 1/D.growth[k]*log(para[5]/D.mass[k]);
                 if D.time[k] < t0
                     return -Inf
                 else
-                    temp = log((para[4]*para[2])/(para[4]+para[3]) + (D.mass[k]*para[2])/(para[4]+para[3])*exp(D.growth[k]*D.time[k])) + ((para[2]/(para[4]+para[3]))*(para[3]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k] + para[4]*t0))
+                    temp = log((para[3]*para[4])/(para[4]+para[5]) + (D.mass[k]*para[3])/(para[4]+para[3])*exp(D.growth[k]*D.time[k])) + ((para[3]/(para[4]+para[5]))*(para[5]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k] + para[4]*t0))
                 end
             else
-                temp = log((para[4]*para[2])/(para[4]+para[3]) + (D.mass[k]*para[2])/(para[4]+para[3])*exp(D.growth[k]*D.time[k])) + ((para[2]/(para[4]+para[3]))*(D.mass[k]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k]))
+                temp = log((para[3]*para[4])/(para[4]+para[5]) + (D.mass[k]*para[3])/(para[4]+para[3])*exp(D.growth[k]*D.time[k])) + ((para[3]/(para[4]+para[5]))*(D.mass[k]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k]))
             end
             like += temp
         end
-        return like + sum([logpdf(LogNormal(para[1],para[5]),D.growth[k]) for k=1:length(D.growth)]) + sum([logpdf(pri,para[k]) for k=1:length(para)])
+        return like + sum([logpdf(LogNormal(para[1],para[2]),D.growth[k]) for k=1:length(D.growth)])
     end
 end
 
 
 function log_prior(para::Vector)
-    return sum([logpdf(pri,para[k]) for k=1:length(para)])
+    return sum([logpdf(pri,para[k]) for k=1:length(para)-1]) + logpdf(pri_u,para[end])
 end
 
 
 # initial parameters
-const u = 0.6; #lower treshhold for division
-const v = 2.; #upper treshhold for division
 const o1 = 1.; #mean of growth rate distribution
 const sig = 0.5; #sd of growth rate distribution
 const o2 = 0.5; #hazard rate functions constant
+const u = 0.6; #lower treshhold for division
+const v = 2.; #upper treshhold for division
 
-const pri = Uniform(0,10); #prior distribution
+const pri = Uniform(0,4); #prior distribution for o1,sig,o2 and v
+const pri_u = Uniform(0,v); # prior distribution for u depending on v
 
-generate = true;
+generate = false;
 if generate
     # Initial variables
     N = 10; #number of observations
@@ -105,13 +107,22 @@ end
 plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-loglhood = x -> log_posterior(gendata,[x[1],x[2],x[4],v,x[3]]);
+numdims = 5; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,x) + log_prior(x);
 
-x = rand(pri,numdims,numwalkers); # define initial points for parameters
-chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(loglhood,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+# x = rand(pri,numdims,numwalkers); # define initial points with all same prior
+x = vcat(rand(pri,numdims-1,numwalkers),rand(pri_u,1,numwalkers)); #define initial point with regard to prior of u
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
 
+corrplot(transpose(flatchain[1:3,:]))
+[x[1],x[2],x[3],v,x[4]]
 
+
+means = mean(flatchain,dims=2);
+gro_distr = LogNormal(means[1],means[2]);
+poi = range(1,4,1000);
+histogram(readdata.growth)
+plot(poi, pdf.(gro_distr, poi))
