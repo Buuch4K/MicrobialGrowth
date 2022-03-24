@@ -132,7 +132,7 @@ const v = 1.; #upper treshhold for division
 const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
 const pri = Uniform(0,10); #define prior distribution
-generate = true;
+generate = false;
 if generate
     # initial parameters for the data generation
     N = 250; #number of observations
@@ -141,14 +141,9 @@ if generate
     div_time, mass = generate_data(m0,N);
 else
     div_time,mass,rate = read_data(15.,"data/Susman18_physical_units.csv"); # read data fram csv file
-    const v = 1.;
 end
 
 plot_data(div_time,mass,rate)
-
-# plot_survival(range(0,1,10), mass[8])
-
-# log_likeli(div_time,mass,[o1,o2,u,v])
 
 
 # applying the MH algo for the posterior Distribution
