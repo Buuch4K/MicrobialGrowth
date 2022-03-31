@@ -38,4 +38,7 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain, llhoodva
 
 histogram(flatchain[1,:])
 mean(flatchain[1,:])
-means[1]
+
+
+using InvertibleNetworks
+
