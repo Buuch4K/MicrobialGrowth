@@ -6,6 +6,7 @@ struct Data
     mass
 end
 
+
 function generate_data(si::Float64,num::Int64)
     X = Float64[si];
     Y = Array{Float64}(undef,num);
