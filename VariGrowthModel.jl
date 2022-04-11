@@ -107,7 +107,7 @@ scatter(div_ratio .* exp.(readdata.growth[2:end].*readdata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
 numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],v,x[4]]) + log_prior([x[1],x[2],x[3],v,x[4]]);
+logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],v,x[4]]) + log_prior([x[1],x[2],x[3],v,x[4]]);
 
 x = rand(pri,numdims,numwalkers); # define initial points with all same prior
 # x = vcat(rand(pri,numdims-1,numwalkers),rand(pri_u,1,numwalkers)); #define initial point with regard to prior of u
@@ -128,6 +128,6 @@ corrplot(flatchain)
 
 means = mean(flatchain,dims=1);
 gro_distr = LogNormal(means[1],means[2]);
-poi = range(0,1,100);
+poi = range(0,4,1000);
 histogram(readdata.growth)
-plot(poi, pdf.(gro_distr, poi))
+plot(poi, pdf.(LogNormal(0.8,0.8), poi))
