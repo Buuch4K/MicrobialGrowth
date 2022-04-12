@@ -97,8 +97,8 @@ readdata = read_data("data/modified_Susman18_physical_units.csv")
 plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],u,v,c]) + log_prior([x[1],x[2],x[3],u,v,c]);
+numdims = 2; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],o2,u,v,c]) + log_prior([x[1],x[2],o2,u,v,c]);
 
 x = rand(pri,numdims,numwalkers); # define initial points with all same prior
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
