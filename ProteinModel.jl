@@ -16,7 +16,7 @@ function generate_data(si::Float64,num::Int64)
     f = rand(Beta(2,3),num);
     for n = 1:num
         t0 = max(0,1/alpha[n]*log((u+c*X[n])/(c*X[n])));
-        h = t -> log(k[n]) + o2/(u+v)*((c*X[n])/alpha[n]*exp(alpha[n]*t)*exp(alpha[n]*t0) - c*X[n]*t + v*t - (c*X[n])/alpha[n]*exp(alpha[n]*t0))
+        h = t -> log(k[n]) + o2/(u+v)*((c*X[n])/alpha[n]*exp(alpha[n]*(t+t0)) - c*X[n]*t + v*t - (c*X[n])/alpha[n]*exp(alpha[n]*t0))
         hx = ZeroProblem(h, 1)
         Y[n] = solve(hx)+t0;
         next_size = X[n] * exp(alpha[n]*Y[n]) * f[n]
@@ -79,12 +79,12 @@ end
 # initial parameters
 const o1 = 0.8; #mean of growth rate distribution
 const sig = 0.8; #sd of growth rate distribution
-const o2 = 0.5; #hazard rate functions constant
+const o2 = 1.4; #hazard rate functions constant
 const u = 2.5; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 const c = 1.2; #protein constant
 
-const pri = Uniform(0,6); #prior distribution for all parameters
+const pri = Uniform(0,4); #prior distribution for all parameters
 
 # generate data using defined model
 N = 200; #number of observations
@@ -92,13 +92,13 @@ m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
 # read data from data set
-readdata = read_data("data/modified_Susman18_physical_units.csv")
+# readdata = read_data("data/modified_Susman18_physical_units.csv")
 
-plot_data(gendata)
+# plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 2; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],o2,u,v,c]) + log_prior([x[1],x[2],o2,u,v,c]);
+numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],u,v,c]) + log_prior([x[1],x[2],x[3],u,v,c]);
 
 x = rand(pri,numdims,numwalkers); # define initial points with all same prior
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
@@ -109,3 +109,4 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodval
 chain = permutedims(chain, [1,3,2]);
 flatchain = permutedims(flatchain,[2,1]);
 
+corrplot(flatchain)
