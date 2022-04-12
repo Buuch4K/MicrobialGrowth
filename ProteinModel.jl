@@ -45,6 +45,37 @@ function plot_data(D::Data)
 end
 
 
+function log_likeli(D::Data,p::Vector)
+    # p = [o1,sig,o2,u,v,c]
+    if any(x->x.<0,p)
+        return -Inf
+    else
+        like = 0.;
+        for k = 1:length(D.time)
+            t0 = max(0,1/D.growth[k]*log((u+c*D.mass[k])/(c*D.mass[k])))
+            if D.time[k] < t0
+                return -Inf
+            else
+                fac = -p[3]/(p[4]+p[5]) * ((p[6]*D.mass[k])/D.growth[k]*exp(D.growth[k]*D.time[k]) - p[6]*D.mass[k]*D.time[k] + p[5]*D.time[k] - (p[6]*D.mass[k])/D.growth[k]*exp(D.growth[k]*t0) + p[6]*D.mass[k]*t0 - p[5]*t0)
+                temp = log(p[3]/(p[4]+p[5])*(p[5] - p[6]*D.mass[k] + p[6]*D.mass[k]*exp(D.growth[k]*D.time[k])))*fac
+            end
+            like += temp
+        end
+        return like + sum([logpdf(LogNormal(p[1],p[2]),D.growth[k]) for k = 1:length(p)])
+    end
+end
+
+
+function log_prior(p::Vector)
+    # p = [o1,sig,o2,u,v,c]
+    if p[3] >= p[4]
+        return -Inf
+    else
+        return sum([logpdf(pri,p[k]) for k=1:length(p)])
+    end
+end
+
+
 # initial parameters
 const o1 = 0.8; #mean of growth rate distribution
 const sig = 0.8; #sd of growth rate distribution
@@ -60,4 +91,21 @@ N = 200; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
+# read data from data set
+readdata = read_data("data/modified_Susman18_physical_units.csv")
+
 plot_data(gendata)
+
+# applying the MH algo for the posterior Distribution
+numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],u,v,c]) + log_prior([x[1],x[2],x[3],u,v,c]);
+
+x = rand(pri,numdims,numwalkers); # define initial points with all same prior
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
+chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+
+# permute dimensions to simplify plotting
+chain = permutedims(chain, [1,3,2]);
+flatchain = permutedims(flatchain,[2,1]);
+
