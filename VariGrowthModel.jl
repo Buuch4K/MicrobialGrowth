@@ -95,7 +95,7 @@ const pri = Uniform(0,6); #prior distribution for o1,sig,o2 and v
 
 # generate data using defined model
 N = 200; #number of observations
-m0 = 2.; #initial mass of cell
+m0 = 2.6; #initial mass of cell
 gendata, gen_div_ratio = generate_data(m0,N);
 
 # read data from dataset
