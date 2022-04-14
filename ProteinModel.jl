@@ -12,10 +12,10 @@ function generate_data(si::Float64,num::Int64)
     X = Float64[si];
     Y = Array{Float64}(undef,num);
     k = rand(Uniform(0,1),num);
-    alpha = rand(LogNormal(o1,sig),num);
-    f = rand(Beta(2,3),num);
+    alpha = rand(Gamma(o1,sig),num);
+    f = rand(Beta(b1,b2),num);
     for n = 1:num
-        t0 = max(0,1/alpha[n]*log((u+c*X[n])/(c*X[n])));
+        t0 = 1/alpha[n]*log((u+c*X[n])/(c*X[n]));
         h = t -> log(k[n]) + o2/(u+v)*((c*X[n])/alpha[n]*exp(alpha[n]*(t+t0)) - c*X[n]*t + v*t - (c*X[n])/alpha[n]*exp(alpha[n]*t0))
         hx = ZeroProblem(h, 1)
         Y[n] = solve(hx)+t0;
@@ -46,7 +46,7 @@ end
 
 
 function log_likeli(D::Data,p::Vector)
-    # p = [o1,sig,o2,u,v,c]
+    # p = [o1,sig,b1,b2,o2,u,v,c]
     if any(x->x.<0,p)
         return -Inf
     else
@@ -56,19 +56,18 @@ function log_likeli(D::Data,p::Vector)
             if D.time[k] < t0
                 return -Inf
             else
-                fac = -p[3]/(p[4]+p[5]) * ((p[6]*D.mass[k])/D.growth[k]*exp(D.growth[k]*D.time[k]) - p[6]*D.mass[k]*D.time[k] + p[5]*D.time[k] - (p[6]*D.mass[k])/D.growth[k]*exp(D.growth[k]*t0) + p[6]*D.mass[k]*t0 - p[5]*t0)
-                temp = log(p[3]/(p[4]+p[5])*(p[5] - p[6]*D.mass[k] + p[6]*D.mass[k]*exp(D.growth[k]*D.time[k])))*fac
+                temp = 0
             end
             like += temp
         end
-        return like + sum([logpdf(LogNormal(p[1],p[2]),D.growth[k]) for k = 1:length(p)])
+        return like + sum([logpdf(Gamma(p[1],p[2]),D.growth[k]) for k = 1:length(D.growth)]) + sum([logpdf(Beta(p[3],p[4]),D.divratio[k]) for k = 1:length(D.divratio)])
     end
 end
 
 
 function log_prior(p::Vector)
-    # p = [o1,sig,o2,u,v,c]
-    if p[3] >= p[4]
+    # p = [o1,sig,b1,b2,o2,u,v,c]
+    if p[6] >= p[7]
         return -Inf
     else
         return sum([logpdf(pri,p[k]) for k=1:length(p)])
@@ -77,12 +76,16 @@ end
 
 
 # initial parameters
-const o1 = 0.8; #mean of growth rate distribution
-const sig = 0.8; #sd of growth rate distribution
-const o2 = 1.4; #hazard rate functions constant
+const o1 = 19.545; # growth distribution
+const sig = 0.0719;
+
+const b1 = 28.2812; # division distribution
+const b2 = 28.8525;
+
+const o2 = 1.4; #hazard ratio
 const u = 2.5; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
-const c = 1.2; #protein constant
+const c = 1.; #protein constant
 
 const pri = Uniform(0,4); #prior distribution for all parameters
 
@@ -92,13 +95,13 @@ m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
 # read data from data set
-# readdata = read_data("data/modified_Susman18_physical_units.csv")
+readdata = read_data("data/modified_Susman18_physical_units.csv")
 
-# plot_data(gendata)
+plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],u,v,c]) + log_prior([x[1],x[2],x[3],u,v,c]);
+numdims = 2; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],o2,u,v,c]) + log_prior([x[1],x[2],o2,u,v,c]);
 
 x = rand(pri,numdims,numwalkers); # define initial points with all same prior
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
