@@ -116,8 +116,8 @@ plot_data(readdata)
 scatter(div_ratio .* exp.(readdata.growth[2:end].*readdata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
-numdims = 6; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],x[4],x[5],x[6],v]) + log_prior([x[1],x[2],x[3],x[4],x[5],x[6],v]);
+numdims = 5; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],x[4],x[5],u,v]) + log_prior([x[1],x[2],x[3],x[4],x[5],u,v]);
 
 x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers)); # define initial points
 x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,numwalkers),rand(pri,numdims-4,numwalkers)); # define initial points
