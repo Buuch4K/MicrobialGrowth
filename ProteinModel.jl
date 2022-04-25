@@ -52,11 +52,11 @@ function log_likeli(D::Data,p::Vector)
     else
         like = 0.;
         for k = 1:length(D.time)
-            t0 = max(0,1/D.growth[k]*log((u+c*D.mass[k])/(c*D.mass[k])))
+            t0 = max(0,1/D.growth[k]*log((p[6]+p[8]*D.mass[k])/(p[8]*D.mass[k])))
             if D.time[k] < t0
                 return -Inf
             else
-                temp = 0
+                temp = log(p[5]/(p[6]+p[7])*(p[7]+p[8]*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) - (p[5]/(p[6]+p[7])*((p[8]*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]+p[8]*D.mass[k])*D.time[k] + (p[8]*D.mass[k]-p[7])*t0))
             end
             like += temp
         end
@@ -70,7 +70,10 @@ function log_prior(p::Vector)
     if p[6] >= p[7]
         return -Inf
     else
-        return sum([logpdf(pri,p[k]) for k=1:length(p)])
+        gam = logpdf(pri_Gamma,para[1]) + logpdf(pri,para[2]);
+        be = logpdf(pri_Beta,para[3]) + logpdf(pri_Beta,para[4]);
+        re = sum([logpdf(pri,para[k]) for k=5:length(p)]);
+        return gam+be+re
     end
 end
 
@@ -87,7 +90,10 @@ const u = 2.5; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 const c = 1.; #protein constant
 
-const pri = Uniform(0,4); #prior distribution for all parameters
+# prior distributions
+const pri_Gamma = Uniform(0,4);
+const pri_Beta = Uniform(0,4);
+const pri = Uniform(0,4);
 
 # generate data using defined model
 N = 200; #number of observations
