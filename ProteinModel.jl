@@ -79,21 +79,21 @@ end
 
 
 # initial parameters
-const o1 = 19.545; # growth distribution
-const sig = 0.0719;
+const o1 = 27.1232; # growth distribution
+const sig = 0.05189;
 
-const b1 = 28.2812; # division distribution
-const b2 = 28.8525;
+const b1 = 16.0817; # division distribution
+const b2 = 16.0425;
 
-const o2 = 1.4; #hazard ratio
+const o2 = 1.7761; #hazard ratio
 const u = 2.5; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 const c = 1.; #protein constant
 
 # prior distributions
-const pri_Gamma = Uniform(0,4);
-const pri_Beta = Uniform(0,4);
-const pri = Uniform(0,4);
+const pri_Gamma = Uniform(20,34);
+const pri_Beta = Uniform(10,22);
+const pri = Uniform(0,6);
 
 # generate data using defined model
 N = 200; #number of observations
@@ -107,7 +107,7 @@ plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
 numdims = 2; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],o2,u,v,c]) + log_prior([x[1],x[2],o2,u,v,c]);
+logpost = x -> log_likeli(gendata,[x[1],x[2],b1,b2,o2,u,v,c]) + log_prior([x[1],x[2],b1,b2,o2,u,v,c]);
 
 x = rand(pri,numdims,numwalkers); # define initial points with all same prior
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
