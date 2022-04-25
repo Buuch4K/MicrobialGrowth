@@ -51,21 +51,21 @@ end
 
 
 function log_likeli(D::Data,para::Vector)
-    # para = [o1,sig,b1,b2,o2,v,u]
+    # para = [o1,sig,b1,b2,o2,u,v]
     if any(x->x.<0,para)
         return -Inf
     else
         like = 0.;
         for k = 1:length(D.time)
-            if D.mass[k] < para[5]
-                t0 = 1/D.growth[k]*log(para[5]/D.mass[k]);
+            if D.mass[k] < para[6]
+                t0 = 1/D.growth[k]*log(para[6]/D.mass[k]);
                 if D.time[k] < t0
                     return -Inf
                 else
-                    temp = log((para[3]*para[4])/(para[4]+para[5]) + (D.mass[k]*para[3])/(para[4]+para[5])*exp(D.growth[k]*D.time[k])) + ((para[3]/(para[4]+para[5]))*(para[5]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k] + para[4]*t0))
+                    temp = log((para[5]*para[7])/(para[7]+para[6]) + (D.mass[k]*para[5])/(para[6]+para[7])*exp(D.growth[k]*D.time[k])) + ((para[5]/(para[6]+para[7]))*(para[6]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[7]*D.time[k] + para[7]*t0))
                 end
             else
-                temp = log((para[3]*para[4])/(para[4]+para[5]) + (D.mass[k]*para[3])/(para[4]+para[5])*exp(D.growth[k]*D.time[k])) + ((para[3]/(para[4]+para[5]))*(D.mass[k]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[4]*D.time[k]))
+                temp = log((para[5]*para[7])/(para[7]+para[6]) + (D.mass[k]*para[5])/(para[6]+para[7])*exp(D.growth[k]*D.time[k])) + ((para[5]/(para[6]+para[7]))*(D.mass[k]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[7]*D.time[k]))
             end
             like += temp
         end
@@ -75,10 +75,13 @@ end
 
 
 function log_prior(para::Vector)
-    if para[4] <= para[5]
+    if para[6] > para[7]
         return -Inf
     else
-        return sum([logpdf(pri,para[k]) for k=1:length(para)])
+        gam = logpdf(pri_Gamma,para[1]) + logpdf(pri,para[2]);
+        be = logpdf(pri_Beta,para[3]) + logpdf(pri_Beta,para[4]);
+        re = sum([logpdf(pri,para[k]) for k=5:7]);
+        return gam+be+re
     end
 end
 
@@ -94,8 +97,10 @@ const o2 = 0.5; #hazard rate functions constant
 const u = 2.5; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 
-const pri = Uniform(0,6); #prior distribution for o1,sig,o2 and v
-# const pri_u = Uniform(0,v); # prior distribution for u depending on v
+#prior distributions
+const pri_Gamma = Uniform(20,36); #gendata (14,22), readdata (20,36)
+const pri_Beta = Uniform(16,24); #gendata (26,34), readdata (16,24)
+const pri = Uniform(0,6);
 
 
 # generate data using defined model
@@ -106,16 +111,17 @@ gendata = generate_data(m0,N);
 # read data from dataset
 readdata = read_data("data/modified_Susman18_physical_units.csv");
 
-plot_data(gendata)
+plot_data(readdata)
 
 scatter(div_ratio .* exp.(readdata.growth[2:end].*readdata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
-numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],v,x[4]]) + log_prior([x[1],x[2],x[3],v,x[4]]);
+numdims = 6; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],x[4],x[5],x[6],v]) + log_prior([x[1],x[2],x[3],x[4],x[5],x[6],v]);
 
-x = rand(pri,numdims,numwalkers); # define initial points with all same prior
-# x = vcat(rand(pri,numdims-1,numwalkers),rand(pri_u,1,numwalkers)); #define initial point with regard to prior of u
+x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers)); # define initial points
+x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,numwalkers),rand(pri,numdims-4,numwalkers)); # define initial points
+
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
@@ -125,14 +131,11 @@ chain = permutedims(chain, [1,3,2]);
 flatchain = permutedims(flatchain,[2,1]);
 
 
-corrplot(flatchain[:,1:3])
-corrplot(flatchain[:,4:5])
-corrplot(flatchain)
-[x[1],x[2],x[3],v,x[4]]
+corrplot(flatchain[:,1:2])
+corrplot(flatchain[:,3:4])
+corrplot(flatchain[:,5:6])
 
 
-means = mean(flatchain,dims=1);
-gro_distr = LogNormal(means[1],means[2]);
 poi = range(0,4,1000);
 histogram(readdata.growth, normalize=true)
 plot!(poi, pdf.(Gamma(0.8,0.8), poi))

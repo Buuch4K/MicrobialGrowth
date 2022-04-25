@@ -99,7 +99,7 @@ const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
 const u = 0.6; #lower treshhold for division
 const v = 1.; #upper treshhold for division
-const pri = Uniform(0,4); #define prior distribution
+const pri = Uniform(0,6); #define prior distribution
 
 # initial parameters for the data generation
 N = 200; #number of observations
@@ -110,12 +110,12 @@ gendata = generate_data(m0,N);
 
 readdata = read_data("data/modified_Susman18_physical_units.csv"); # read data fram csv file
 
-plot_data(gendata)
+plot_data(readdata)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 2; numwalkers = 20; thinning = 10; numsamples_perwalker = 2000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],u,v])+log_prior([x[1],x[2],u,v]);
+numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 2000; burnin = 1000;
+logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],v])+log_prior([x[1],x[2],x[3],v]);
 
 x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
