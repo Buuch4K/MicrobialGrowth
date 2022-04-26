@@ -32,7 +32,7 @@ end
 
 
 function read_data(filename::String)
-    data = CSV.File(filename,select=["lineage_ID","generationtime","length_birth","growth_rate","division_ratio"]);
+    data = CSV.File(filename,select=["generationtime","length_birth","growth_rate","division_ratio"]);
     return Data(data.generationtime,data.growth_rate,data.length_birth,data.division_ratio[2:end]) 
 end
 
@@ -75,6 +75,7 @@ end
 
 
 function log_prior(para::Vector)
+    #para = [o1,sig,b1,b2,o2,u,v]
     if para[6] > para[7]
         return -Inf
     else
@@ -94,13 +95,13 @@ const b1 = 28.2812; # division distribution
 const b2 = 28.8525;
 
 const o2 = 0.5; #hazard rate functions constant
-const u = 2.5; #lower treshhold for division
+const u = 0.1; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 
 #prior distributions
-const pri_Gamma = Uniform(20,36); #gendata (14,22), readdata (20,36)
-const pri_Beta = Uniform(16,24); #gendata (26,34), readdata (16,24)
-const pri = Uniform(0,6);
+pri_Gamma = Uniform(20,36); #gendata (13,25), readdata (20,36)
+pri_Beta = Uniform(16,24); #gendata (22,34), readdata (16,24)
+pri = Uniform(0,6);
 
 
 # generate data using defined model
@@ -113,11 +114,11 @@ readdata = read_data("data/modified_Susman18_physical_units.csv");
 
 plot_data(readdata)
 
-scatter(div_ratio .* exp.(readdata.growth[2:end].*readdata.time[2:end]))
+scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
-numdims = 5; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],x[4],x[5],u,v]) + log_prior([x[1],x[2],x[3],x[4],x[5],u,v]);
+numdims = 6; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],x[4],x[5],x[6],v]) + log_prior([x[1],x[2],x[3],x[4],x[5],x[6],v]);
 
 x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers)); # define initial points
 x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,numwalkers),rand(pri,numdims-4,numwalkers)); # define initial points
