@@ -61,22 +61,18 @@ function plot_data(D::Data,growth = 1)
 end
 
 
-function log_likeli(D::Data,para::Vector)
+function log_likeli(D::Data,p::Vector)
     # para = [o1,o2,u,v]
-    if any(x-> x.<0,para)
+    if any(x -> x.<0,p)
         return -Inf
     else
         like = 0.;
         for k in 1:length(D.time)
-            if D.mass[k] < para[3]
-                t0 = 1/para[1]*log(para[3]/D.mass[k]);
-                if D.time[k] < t0
-                    return -Inf # division cannot happen until s >= u
-                else
-                    temp = log((para[4]*para[2])/(para[4]+para[3]) + (D.mass[k]*para[2])/(para[4]+para[3])*exp(para[1]*D.time[k])) + ((para[2]/(para[4]+para[3]))*(para[3]/para[1] - (D.mass[k]*exp(para[1]*D.time[k]))/para[1] - para[4]*D.time[k] + para[4]*t0))
-                end
+            t0 = max(0,1/p[1]*log(p[3]/D.mass[k]))
+            if D.time[k] < t0
+                return -Inf
             else
-                temp = log((para[4]*para[2])/(para[4]+para[3]) + (D.mass[k]*para[2])/(para[4]+para[3])*exp(para[1]*D.time[k])) + ((para[2]/(para[4]+para[3]))*(D.mass[k]/para[1] - (D.mass[k]*exp(para[1]*D.time[k]))/para[1] - para[4]*D.time[k]))
+                temp = log(p[2]/(p[3]+p[4])*(D.mass[k]*exp(p[1]*D.time[k]) + p[4])) + (p[2]/(p[3]+p[4])*(D.mass[k]/p[1]*(exp(p[1]*t0)-exp(p[1]*D.time[k])) + p[4]*(t0-D.time[k])))
             end
             like += temp
         end
@@ -85,43 +81,62 @@ function log_likeli(D::Data,para::Vector)
 end
 
 
-function log_prior(para::Vector)
-    if para[3] >= para[4]
+function log_prior(p::Vector)
+    if p[3] > p[4]
         return -Inf
     else
-        return sum([logpdf(pri,para[k]) for k = 1:length(para)])
+        return sum([logpdf(pri,p[k]) for k = 1:length(p)])
     end
 end
+
+
+function remove_stuck_chain(chain,llhood,nwalk)
+    bad_idx = []; 
+    for k=1:nwalk
+        if all(y -> y == first(chain[3,k,:]), chain[3,k,:])
+            push!(bad_idx, k);
+        end
+    end
+    idx = setdiff(1:20,bad_idx)
+    return chain[:,idx,:],llhood[:,idx,:]
+end
+
 
 
 # initial values for generating data
 const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
-const u = 0.6; #lower treshhold for division
-const v = 1.; #upper treshhold for division
-const pri = Uniform(0,6); #define prior distribution
+const u = 0.2; #lower treshhold for division
+const v = 4.; #upper treshhold for division
+pri = Uniform(0,4); #define prior distribution
 
 # initial parameters for the data generation
 N = 200; #number of observations
-m0 = 0.8; #initial size
-
+m0 = 2.4; #initial size
 gendata = generate_data(m0,N);
 
-
+# read data from data set
 readdata = read_data("data/modified_Susman18_physical_units.csv"); # read data fram csv file
 
-plot_data(readdata)
+plot_data(gendata)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 2000; burnin = 1000;
-logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],v])+log_prior([x[1],x[2],x[3],v]);
+numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],v]) + log_prior([x[1],x[2],x[3],v]);
 
 x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+
+# no stuck chains
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+
+# remove stuck chains
+mod_chain,mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
+mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals)
 
 # permute dimensions to simplify plotting
 chain = permutedims(chain, [1,3,2]);
 flatchain = permutedims(flatchain,[2,1]);
+
