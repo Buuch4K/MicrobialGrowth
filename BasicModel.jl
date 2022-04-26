@@ -108,7 +108,9 @@ const o1 = 1.; #exponential growth rate
 const o2 = 0.5; #hazard rate functions constant
 const u = 0.2; #lower treshhold for division
 const v = 4.; #upper treshhold for division
-pri = Uniform(0,4); #define prior distribution
+
+# define prior distribution
+pri = Uniform(0,6); #gendata (0,4), readdata (0,6)
 
 # initial parameters for the data generation
 N = 200; #number of observations
@@ -123,18 +125,16 @@ plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
 numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(gendata,[x[1],x[2],x[3],v]) + log_prior([x[1],x[2],x[3],v]);
+logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],v]) + log_prior([x[1],x[2],x[3],v]);
 
 x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
-
-# no stuck chains
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
 # remove stuck chains
 mod_chain,mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
-mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals)
+mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
 
 # permute dimensions to simplify plotting
 chain = permutedims(chain, [1,3,2]);
