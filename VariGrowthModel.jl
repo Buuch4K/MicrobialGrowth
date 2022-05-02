@@ -57,15 +57,11 @@ function log_likeli(D::Data,para::Vector)
     else
         like = 0.;
         for k = 1:length(D.time)
-            if D.mass[k] < para[6]
-                t0 = 1/D.growth[k]*log(para[6]/D.mass[k]);
-                if D.time[k] < t0
-                    return -Inf
-                else
-                    temp = log((para[5]*para[7])/(para[7]+para[6]) + (D.mass[k]*para[5])/(para[6]+para[7])*exp(D.growth[k]*D.time[k])) + ((para[5]/(para[6]+para[7]))*(para[6]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[7]*D.time[k] + para[7]*t0))
-                end
+            t0 = max(0,1/D.growth[k]*log(para[6]/D.mass[k]));
+            if D.time[k] < t0
+                return -Inf
             else
-                temp = log((para[5]*para[7])/(para[7]+para[6]) + (D.mass[k]*para[5])/(para[6]+para[7])*exp(D.growth[k]*D.time[k])) + ((para[5]/(para[6]+para[7]))*(D.mass[k]/D.growth[k] - (D.mass[k]*exp(D.growth[k]*D.time[k]))/D.growth[k] - para[7]*D.time[k]))
+                temp = log((para[5]*para[7])/(para[6]+para[7]) + (para[5]*D.mass[k])/(para[6]+para[7])*exp(D.growth[k]*D.time[k])) + (-para[5]/(para[6]+para[7])*(D.mass[k]/D.growth[k]*(exp(D.growth[k])*D.time[k] - exp(D.growth[k]*t0)) + para[7]*(D.time[k] - t0)))
             end
             like += temp
         end
@@ -127,16 +123,9 @@ chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
+
+
+
 # permute dimensions to simplify plotting
 chain = permutedims(chain, [1,3,2]);
 flatchain = permutedims(flatchain,[2,1]);
-
-
-corrplot(flatchain[:,1:2])
-corrplot(flatchain[:,3:4])
-corrplot(flatchain[:,5:6])
-
-
-poi = range(0,4,1000);
-histogram(readdata.growth, normalize=true)
-plot!(poi, pdf.(Gamma(0.8,0.8), poi))
