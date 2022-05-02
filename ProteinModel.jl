@@ -67,7 +67,7 @@ end
 
 function log_prior(p::Vector)
     # p = [o1,sig,b1,b2,o2,u,v,c]
-    if p[6] >= p[7]
+    if p[6] > p[7]
         return -Inf
     else
         gam = logpdf(pri_Gamma,para[1]) + logpdf(pri,para[2]);
