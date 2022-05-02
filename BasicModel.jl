@@ -120,7 +120,7 @@ gendata = generate_data(m0,N);
 # read data from data set
 readdata = read_data("data/modified_Susman18_physical_units.csv"); # read data fram csv file
 
-plot_data(gendata)
+plot_data(readdata)
 
 
 # applying the MH algo for the posterior Distribution
