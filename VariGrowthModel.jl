@@ -85,7 +85,7 @@ function log_likeli(p::Vector,D::Data,f::Vector)
 end
 
 
-function log_prior(p::Vector,f::Vector)
+function log_prior(p::Vector)
     #p = [o2,u,v]
     if p[2] > p[3]
         return -Inf
@@ -108,11 +108,11 @@ end
 
 
 # initial parameters
-const o1 = 19.545; # growth distribution
-const sig = 0.0719;
+const o1 = 19.5; # growth distribution
+const sig = 0.07;
 
-const b1 = 28.2812; # division distribution
-const b2 = 28.8525;
+const b1 = 28.; # division distribution
+const b2 = 29.;
 
 const o2 = 0.5; #hazard rate functions constant
 const u = 0.1; #lower treshhold for division
@@ -120,7 +120,7 @@ const v = 5.5; #upper treshhold for division
 
 #prior distributions
 pri_Gamma = Uniform(13,25); #gendata (13,25), readdata (20,36)
-pri_Beta = Uniform(22,34); #gendata (22,34), readdata (16,24)
+pri_Beta = Uniform(20,38); #gendata (20,38), readdata (16,24)
 pri = Uniform(0,6);
 
 
@@ -145,10 +145,11 @@ x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,num
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,x,burnin,1);
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,chain1[:, :, end],numsamples_perwalker,thinning);
 flatchain1, flatllhoodvals1 = AffineInvariantMCMC.flattenmcmcarray(chain1,llhoodvals1);
-fixed = mean(flatchain1,dims=2)[:,1]
+flatchain1 = permutedims(flatchain1,[2,1]);
+fixed = mean(flatchain1,dims=1)[1,:]
 
 # step two: infer the parameters o2,u,v
-numdims = 3; logpost = x -> log_likeli(gendata,x,fixed) + log_prior(x,fixed);
+numdims = 3; logpost = x -> log_likeli(x,gendata,fixed) + log_prior(x);
 x = rand(pri,numdims,numwalkers);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,chain2[:, :, end],numsamples_perwalker,thinning);
@@ -156,8 +157,4 @@ flatchain2, flatllhoodvals2 = AffineInvariantMCMC.flattenmcmcarray(chain2,llhood
 
 mod_chain2, mod_llhoodvals2 = remove_stuck_chain(chain2,llhoodvals2,numwalkers);
 mod_flatchain2, mod_flatllhoodvals2 = AffineInvariantMCMC.flattenmcmcarray(mod_chain2,mod_llhoodvals2);
-
-
-# permute dimensions to simplify plotting
-chain = permutedims(chain, [1,3,2]);
-flatchain = permutedims(flatchain,[2,1]);
+mod_flatchain2 = permutedims(mod_flatchain2,[2,1]);
