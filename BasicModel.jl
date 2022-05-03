@@ -110,22 +110,22 @@ const u = 0.2; #lower treshhold for division
 const v = 4.; #upper treshhold for division
 
 # define prior distribution
-pri = Uniform(0,6); #gendata (0,4), readdata (0,6)
+pri = Uniform(0,6);
 
 # initial parameters for the data generation
 N = 200; #number of observations
 m0 = 2.4; #initial size
 gendata = generate_data(m0,N);
 
-# read data from data set
-readdata = read_data("data/modified_Susman18_physical_units.csv"); # read data fram csv file
+# read data from csv file
+readdata = read_data("data/modified_Susman18_physical_units.csv");
 
 plot_data(readdata)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 3; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(readdata,[x[1],x[2],x[3],v]) + log_prior([x[1],x[2],x[3],v]);
+numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+logpost = x -> log_likeli(readdata,x) + log_prior(x);
 
 x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
