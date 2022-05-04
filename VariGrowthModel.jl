@@ -49,7 +49,7 @@ function plot_data(D::Data)
     plot(t,result)
 end
 
-function log_likeli_gd(D::Data,p::Vector)
+function log_likeli_gd(p::Vector,D::Data)
     # p = [o1,sig,b1,b2]
     if any(x->x.<0,p)
         return -Inf
@@ -61,7 +61,7 @@ end
 
 function log_prior_gd(p::Vector)
     # p = [01,sig,b1,b2]
-    return logpdf(pri_Gamma,p[1]) + logpdf(pri,p[2]) + logpdf(pri_Beta,p[3]) + logpdf(pri_Beta,p[4])
+    return logpdf(pri_Gamma,p[1]) + logpdf(pri_1,p[2]) + logpdf(pri_Beta,p[3]) + logpdf(pri_Beta,p[4])
 end
 
 
@@ -87,10 +87,10 @@ end
 
 function log_prior(p::Vector)
     #p = [o2,u,v]
-    if p[2] > p[3]
+    if p[2] >= p[3]
         return -Inf
     else
-        return sum([logpdf(pri,p[k]) for k=1:length(p)])
+        return sum([logpdf(pri_2,p[k]) for k=1:length(p)])
     end
 end
 
@@ -119,9 +119,10 @@ const u = 0.1; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 
 #prior distributions
-pri_Gamma = Uniform(13,25); #gendata (13,25), readdata (20,36)
-pri_Beta = Uniform(20,38); #gendata (20,38), readdata (16,24)
-pri = Uniform(0,6);
+pri_Gamma = Uniform(20,36); #gendata (13,25), readdata (20,36)
+pri_Beta = Uniform(12,24); #gendata (20,38), readdata (12,24)
+pri_1 = Uniform(0,10);
+pri_2 = Uniform(1,9);
 
 
 # generate data using defined model
@@ -138,10 +139,10 @@ scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution in two steps
 numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost_gd = x -> log_likeli_gd(gendata,x) + log_prior_gd(x);
+logpost_gd = x -> log_likeli_gd(x,readdata) + log_prior_gd(x);
 
 # step one: infer the parameters for the growth and division distribution
-x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,numwalkers));
+x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri_1,1,numwalkers),rand(pri_Beta,2,numwalkers));
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,x,burnin,1);
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,chain1[:, :, end],numsamples_perwalker,thinning);
 flatchain1, flatllhoodvals1 = AffineInvariantMCMC.flattenmcmcarray(chain1,llhoodvals1);
@@ -149,8 +150,8 @@ flatchain1 = permutedims(flatchain1,[2,1]);
 fixed = mean(flatchain1,dims=1)[1,:]
 
 # step two: infer the parameters o2,u,v
-numdims = 3; logpost = x -> log_likeli(x,gendata,fixed) + log_prior(x);
-x = rand(pri,numdims,numwalkers);
+numdims = 3; logpost = x -> log_likeli(x,readdata,fixed) + log_prior(x);
+x = rand(pri_2,numdims,numwalkers);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,chain2[:, :, end],numsamples_perwalker,thinning);
 flatchain2, flatllhoodvals2 = AffineInvariantMCMC.flattenmcmcarray(chain2,llhoodvals2);
