@@ -108,19 +108,19 @@ end
 
 
 # initial parameters
-const o1 = 19.5; # growth distribution
-const sig = 0.07;
+const o1 = 27.; # growth distribution
+const sig = 0.05;
 
-const b1 = 28.; # division distribution
-const b2 = 29.;
+const b1 = 15.; # division distribution
+const b2 = 15.;
 
-const o2 = 0.5; #hazard rate functions constant
-const u = 0.1; #lower treshhold for division
+const o2 = 1.33; #hazard rate functions constant
+const u = 0.2; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 
 #prior distributions
-pri_Gamma = Uniform(20,36); #gendata (13,25), readdata (20,36)
-pri_Beta = Uniform(12,24); #gendata (20,38), readdata (12,24)
+pri_Gamma = Uniform(20,36);
+pri_Beta = Uniform(12,24);
 pri_1 = Uniform(0,10);
 pri_2 = Uniform(1,9);
 
