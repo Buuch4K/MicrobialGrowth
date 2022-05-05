@@ -57,7 +57,7 @@ end
 
 function log_prior_gd(p::Vector)
     # p = [o1,sig,b1,b2]
-    return logpdf(pri_Gamma,p[1]) + logpdf(pri,p[2]) + logpdf(pri_Beta,p[3]) + logpdf(pri_Beta,p[4])
+    return logpdf(pri_Gamma,p[1]) + logpdf(pri_sig,p[2]) + logpdf(pri_Beta,p[3]) + logpdf(pri_Beta,p[4])
 end
 
 
@@ -83,7 +83,7 @@ end
 
 function log_prior(p::Vector)
     # p = [o2,u,v,c]
-    if p[2] > p[3]
+    if p[2] >= p[3]
         return -Inf
     else
         return sum([logpdf(pri,p[k]) for k=1:length(p)])
@@ -105,20 +105,21 @@ end
 
 # initial parameters
 const o1 = 27.; # growth distribution
-const sig = 0.05189;
+const sig = 0.05;
 
-const b1 = 16.; # division distribution
-const b2 = 16.;
+const b1 = 15.; # division distribution
+const b2 = 15.;
 
-const o2 = 1.7761; #hazard ratio
+const o2 = 1.33; #hazard ratio
 const u = 0.2; #lower treshhold for division
 const v = 5.5; #upper treshhold for division
 const c = 1.; #protein constant
 
 # prior distributions
 pri_Gamma = Uniform(17,37);
+pri_sig = Uniform(0,3);
 pri_Beta = Uniform(6,26);
-pri = Uniform(0,6);
+pri = Uniform(0.3,1.8);
 
 # generate data using defined model
 N = 200; #number of observations
@@ -126,24 +127,24 @@ m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
 # read data from data set
-readdata = read_data("data/modified_Susman18_physical_units.csv")
+readdata = read_data("data/modified_Susman18_physical_units.csv");
 
 plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution in two steps
 numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost_gd = x -> log_likeli_gd(x,gendata) + log_prior_gd(x);
+logpost_gd = x -> log_likeli_gd(x,readdata) + log_prior_gd(x);
 
 # step one: Infer parameters for growth and division distribution
-x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri,1,numwalkers),rand(pri_Beta,2,numwalkers)); # define initial points with all same prior
+x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri_sig,1,numwalkers),rand(pri_Beta,2,numwalkers)); # define initial points with all same prior
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,x,burnin,1);
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,chain1[:, :, end],numsamples_perwalker,thinning);
 flatchain1, flatllhoodvals1 = AffineInvariantMCMC.flattenmcmcarray(chain1,llhoodvals1);
-flatchain1 = permutedims(flatchain1,[2,1]);
-fixed = mean(flatchain1,dims=1)[1,:]
+flatchain1 = transpose(flatchain1);
+fixed = flatchain1[argmax(flatllhoodvals1),:] # fix para values with max likelihood
 
 # step two: Infer the parameters o2,u,v,c
-numdims = 4; numsamples_perwalker = 80000; logpost = x -> log_likeli(x,gendata,fixed) + log_prior(x);
+numdims = 3; numsamples_perwalker = 80000; logpost = x -> log_likeli([x[1],x[2],x[3],c],readdata,fixed) + log_prior([x[1],x[2],x[3],c]);
 x = rand(pri,numdims,numwalkers);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain2, llhoodvals2 = AffineInvariantMCMC.sample(logpost,numwalkers,chain2[:, :, end],numsamples_perwalker,thinning);
@@ -151,4 +152,4 @@ flatchain2, flatllhoodvals2 = AffineInvariantMCMC.flattenmcmcarray(chain2,llhood
 
 mod_chain2, mod_llhoodvals2 = remove_stuck_chain(chain2,llhoodvals2,numwalkers);
 mod_flatchain2, mod_flatllhoodvals2 = AffineInvariantMCMC.flattenmcmcarray(mod_chain2,mod_llhoodvals2);
-mod_flatchain2 = permutedims(mod_flatchain2,[2,1]);
+mod_flatchain2 = transpose(mod_flatchain2);
