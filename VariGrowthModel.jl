@@ -146,7 +146,7 @@ x = vcat(rand(pri_Gamma,1,numwalkers),rand(pri_1,1,numwalkers),rand(pri_Beta,2,n
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,x,burnin,1);
 chain1, llhoodvals1 = AffineInvariantMCMC.sample(logpost_gd,numwalkers,chain1[:, :, end],numsamples_perwalker,thinning);
 flatchain1, flatllhoodvals1 = AffineInvariantMCMC.flattenmcmcarray(chain1,llhoodvals1);
-flatchain1 = permutedims(flatchain1,[2,1]);
+flatchain1 = transpose(flatchain1);
 fixed = mean(flatchain1,dims=1)[1,:]
 
 # step two: infer the parameters o2,u,v
