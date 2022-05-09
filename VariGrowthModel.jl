@@ -13,7 +13,7 @@ function generate_data(si::Float64,num::Int64)
     Y = Array{Float64}(undef,num);
     k = rand(Uniform(0,1),num);
     alpha = rand(Gamma(o1^2/sig,sig/o1),num);
-    f = rand(Beta(((b1*(1-b1))/b2-1)*b1,((b1*(1-b1))/b2-1)*(1-b1)),num);
+    f = rand(Beta(b1,b2),num);
     for n = 1:num
         if X[n] < u
             t0 = 1/alpha[n]*log(u/X[n]);
