@@ -13,7 +13,7 @@ function generate_data(si::Float64,num::Int64)
     Y = Array{Float64}(undef,num);
     k = rand(Uniform(0,1),num);
     alpha = rand(Gamma(o1^2/sig,sig/o1),num);
-    f = rand(Beta(b1,b2),num);
+    f = rand(Beta((b1^2*(1-b1)-b2*b1)/b2,(b1*(1-b1)^2-b2*(1-b1))/b2),num);
     for n = 1:num
         if X[n] < u
             t0 = 1/alpha[n]*log(u/X[n]);
@@ -61,7 +61,7 @@ function log_likeli(p::Vector,D::Data)
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log((p[5]*p[7])/(p[6]+p[7]) + (p[5]*D.mass[k])/(p[6]+p[7])*exp(D.growth[k]*D.time[k])) + (-p[5]/(p[6]+p[7])*(D.mass[k]/D.growth[k]*(exp(D.growth[k])*D.time[k] - exp(D.growth[k]*t0)) + p[7]*(D.time[k] - t0)))
+                temp = log(p[5]/(p[6]+p[7])*(p[7] + D.mass[k]*exp(D.growth[k]*D.time[k]))) + (-p[5]/(p[6]+p[7])*(D.mass[k]/D.growth[k]*(exp(D.growth[k])*D.time[k] - exp(D.growth[k]*t0)) + p[7]*(D.time[k] - t0)))
             end
             like += temp
         end
@@ -75,7 +75,7 @@ function log_prior(p::Vector)
     if p[6] >= p[7]
         return -Inf
     else
-        return sum([logpdf(pri,p[k]) for k=1:2]) + sum([logpdf(pri_beta,p[k]) for k=3:4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
+        return sum([logpdf(pri_gamma,p[k]) for k=1:2]) + sum([logpdf(pri_beta,p[k]) for k=3:4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
     end
 end
 
@@ -109,19 +109,19 @@ const o1 = 1.405; # growth distribution
 const sig = 0.07;
 
 const b1 = 0.5; # division distribution
-const b2 = 0.01;
+const b2 = 0.008;
 
-const o2 = 1.33; #hazard rate functions constant
-const u = 0.2; #lower treshhold for division
-const v = 3.5; #upper treshhold for division
+const o2 = 0.12; #hazard rate functions constant
+const u = 0.09; #lower treshhold for division
+const v = 0.2; #upper treshhold for division
 
 #prior distributions
-pri = Uniform(0,10);
+pri_gamma = Uniform(0,5);
 pri_beta = Uniform(8,24);
-
+pri = Uniform(0,5);
 
 # generate data using defined model
-N = 200; #number of observations
+N = 252; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
@@ -136,12 +136,11 @@ scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 1000;
 logpost = x -> log_likeli(x,readdata) + log_prior(x);
 [x[1],x[2],x[3],x[4],x[5],x[6],v]
-x = vcat(rand(pri,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
+x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
 
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
-beta_distr = extract_beta(chain);
 
 mod_chain, mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
 mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
