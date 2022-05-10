@@ -72,7 +72,7 @@ function log_likeli(D::Data,p::Vector)
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log(p[2]/(p[3]+p[4])*(D.mass[k]*exp(p[1]*D.time[k]) + p[4])) + (p[2]/(p[3]+p[4])*(D.mass[k]/p[1]*(exp(p[1]*t0)-exp(p[1]*D.time[k])) + p[4]*(t0-D.time[k])))
+                temp = log(p[2]/(p[3]+p[4])*(D.mass[k]*exp(p[1]*D.time[k]) + p[4])) + (-p[2]/(p[3]+p[4])*(D.mass[k]/p[1]*(exp(p[1]*D.time[k])-exp(p[1]*t0)) + p[4]*(D.time[k]-t0)))
             end
             like += temp
         end
@@ -98,6 +98,7 @@ function remove_stuck_chain(chain,llhood,nwalk)
         end
     end
     idx = setdiff(1:20,bad_idx)
+    println(length(idx))
     return chain[:,idx,:],llhood[:,idx,:]
 end
 
@@ -113,7 +114,7 @@ const v = 4.; #upper treshhold for division
 pri = Uniform(0,6);
 
 # initial parameters for the data generation
-N = 200; #number of observations
+N = 252; #number of observations
 m0 = 2.4; #initial size
 gendata = generate_data(m0,N);
 
@@ -125,7 +126,7 @@ plot_data(readdata)
 
 # applying the MH algo for the posterior Distribution
 numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
-logpost = x -> log_likeli(readdata,x) + log_prior(x);
+logpost = x -> log_likeli(gendata,x) + log_prior(x);
 
 x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
