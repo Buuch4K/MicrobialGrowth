@@ -107,17 +107,17 @@ const b1 = 0.5; # division distribution
 const b2 = 0.008;
 
 const o2 = 1.33; #hazard ratio
-const u = 0.2; #lower treshhold for division
-const v = 3.5; #upper treshhold for division
+const u = 0.4; #lower treshhold for division
+const v = 0.8; #upper treshhold for division
 const c = 1.; #protein constant
 
 #prior distributions
 pri_gamma = Uniform(0,3);
 pri_beta = Uniform(8,24);
-pri = Uniform(0.2,5); # gendata (0,10), readdata (0.2,5)
+pri = Uniform(0,5); # gendata (0,5), readdata (0.2,5)
 
 # generate data using defined model
-N = 200; #number of observations
+N = 252; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
