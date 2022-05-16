@@ -114,7 +114,7 @@ const c = 1.; #protein constant
 #prior distributions
 pri_gamma = Uniform(0,3);
 pri_beta = Uniform(8,24);
-pri = Uniform(0,5); # gendata (0,5), readdata (0.2,5)
+pri = Uniform(0.2,5); # gendata (0,5), readdata (0.2,5)
 
 # generate data using defined model
 N = 252; #number of observations
