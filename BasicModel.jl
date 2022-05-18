@@ -57,7 +57,7 @@ function plot_data(D::Data,growth = 1)
         t[(k-1)*10+1:k*10] = range(start,start+D.time[k],10)
         result[(k-1)*10+1:k*10] = D.mass[k] .* exp.(growth*range(0,D.time[k],10)) 
     end
-    plot(t,result)
+    plot(t,result, label = false)
 end
 
 
@@ -106,12 +106,12 @@ end
 
 # initial values for generating data
 const o1 = 1.; #exponential growth rate
-const o2 = 0.5; #hazard rate functions constant
+const o2 = 0.8; #hazard rate functions constant
 const u = 0.2; #lower treshhold for division
-const v = 4.; #upper treshhold for division
+const v = 5.; #upper treshhold for division
 
 # define prior distribution
-pri = Uniform(0,6);
+pri = Uniform(0,14);
 
 # initial parameters for the data generation
 N = 252; #number of observations
@@ -121,11 +121,11 @@ gendata = generate_data(m0,N);
 # read data from csv file
 readdata = read_data("data/modified_Susman18_physical_units.csv");
 
-plot_data(readdata)
+plot_data(gendata)
 
 
 # applying the MH algo for the posterior Distribution
-numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 1000;
+numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 2000;
 logpost = x -> log_likeli(gendata,x) + log_prior(x);
 
 x = rand(pri,numdims,numwalkers); # define initial points
