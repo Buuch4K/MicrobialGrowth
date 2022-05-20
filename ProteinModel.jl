@@ -41,7 +41,7 @@ function plot_data(D::Data)
         t[(k-1)*10+1:k*10] = range(start,start+D.time[k],10)
         result[(k-1)*10+1:k*10] = D.mass[k] .* exp.(D.growth[k]*range(0,D.time[k],10))
     end
-    plot(t,result)
+    plot(t,result,label=false)
 end
 
 
@@ -88,14 +88,13 @@ function remove_stuck_chain(chain,llhood,nwalk::Int64)
 end
 
 
-function extract_beta(flat::Matrix)
-    distr = Array{Float64}(undef,size(flat)[2],2)
+function extract_beta!(flat::Matrix)
     for k = 1:size(flat)[2]
         b1 = flat[3,k]; b2 = flat[4,k];
-        distr[k,1] = b1/(b1+b2)
-        distr[k,2] = (b1*b2)/((b1+b2)^2*(b1+b2+1))
+        flat[3,k] = b1/(b1+b2)
+        flat[4,k] = (b1*b2)/((b1+b2)^2*(b1+b2+1))
     end
-    return distr
+    return flat
 end
 
 
