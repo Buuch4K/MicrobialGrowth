@@ -46,7 +46,7 @@ function plot_data(D::Data)
         t[(k-1)*10+1:k*10] = range(start,start+D.time[k],10)
         result[(k-1)*10+1:k*10] = D.mass[k] .* exp.(D.growth[k]*range(0,D.time[k],10))
     end
-    plot(t,result)
+    plot(t,result, label=false)
 end
 
 
@@ -93,14 +93,13 @@ function remove_stuck_chain(chain,llhood,nwalk::Int64)
 end
 
 
-function extract_beta(flat::Matrix)
-    distr = Array{Float64}(undef,size(flat)[2],2)
+function extract_beta!(flat::Matrix)
     for k = 1:size(flat)[2]
         k1 = flat[3,k]; k2 = flat[4,k];
-        distr[k,1] = k1/(k1+k2)
-        distr[k,2] = (k1*k2)/((k1+k2)^2*(k1+k2+1))
+        flat[3,k] = k1/(k1+k2)
+        flat[4,k] = (k1*k2)/((k1+k2)^2*(k1+k2+1))
     end
-    return distr
+    return flat
 end
 
 
@@ -116,9 +115,9 @@ const u = 0.09; #lower treshhold for division
 const v = 0.2; #upper treshhold for division
 
 #prior distributions
-pri_gamma = Uniform(0,5);
+pri_gamma = Uniform(0,3);
 pri_beta = Uniform(8,24);
-pri = Uniform(0,5);
+pri = Uniform(0,2);
 
 # generate data using defined model
 N = 252; #number of observations
@@ -128,14 +127,14 @@ gendata = generate_data(m0,N);
 # read data from dataset
 readdata = read_data("data/modified_Susman18_physical_units.csv");
 
-plot_data(readdata)
+plot_data(gendata)
 
 scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
-numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 1000;
+numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 2000;
 logpost = x -> log_likeli(x,readdata) + log_prior(x);
-[x[1],x[2],x[3],x[4],x[5],x[6],v]
+[x[1],x[2],x[3],x[4],x[5],u,v]
 x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
 
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
@@ -144,4 +143,4 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodval
 
 mod_chain, mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
 mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
-beta_distr = extract_beta(mod_flatchain);
+extract_beta!(mod_flatchain);
