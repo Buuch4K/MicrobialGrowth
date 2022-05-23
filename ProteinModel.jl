@@ -105,7 +105,7 @@ const c = 1.; #protein constant
 #prior distributions
 pri_gamma = Uniform(0,2);
 pri_beta = Uniform(0,1);
-pri = Uniform(0.2,2.5); # gendata (0,3), readdata (0.2,3)
+pri = Uniform(0,3); # gendata (0,3), readdata (0.2,3)
 
 # generate data using defined model
 N = 249; #number of observations
@@ -118,7 +118,7 @@ readdata = read_data("data/modified_Susman18_physical_units.csv");
 plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 7; numwalkers = 40; thinning = 10; numsamples_perwalker = 60000; burnin = 20000;
+numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 60000; burnin = 4000;
 logpost = x -> log_likeli(vcat(x,c),readdata) + log_prior(vcat(x,c));
 
 x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
