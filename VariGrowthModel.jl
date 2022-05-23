@@ -54,6 +54,8 @@ function log_likeli(p::Vector,D::Data)
     # p = [o1,sig,b1,b2,o2,u,v]
     if any(x->x.<0,p)
         return -Inf
+    elseif p[4] >= p[3]*(1-p[3])
+        return -Inf
     else
         like = 0.;
         for k = 1:length(D.time)
@@ -65,7 +67,7 @@ function log_likeli(p::Vector,D::Data)
             end
             like += temp
         end
-        return like + sum([logpdf(Gamma(p[1]^2/p[2],p[2]/p[1]),D.growth[k]) for k=1:length(D.growth)]) + sum([logpdf(Beta(p[3],p[4]),D.divratio[k]) for k=1:length(D.divratio)])
+        return like + sum([logpdf(Gamma(p[1]^2/p[2],p[2]/p[1]),D.growth[k]) for k=1:length(D.growth)]) + sum([logpdf(Beta(p[3]/p[4]*(p[3]*(1-p[3])-p[4]),(1-p[3])/p[4]*(p[3]*(1-p[3])-p[4])),D.divratio[k]) for k=1:length(D.divratio)])
     end
 end
 
