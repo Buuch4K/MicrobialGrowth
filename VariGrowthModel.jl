@@ -95,16 +95,6 @@ function remove_stuck_chain(chain,llhood,nwalk::Int64)
 end
 
 
-function extract_beta!(flat::Matrix)
-    for k = 1:size(flat)[2]
-        k1 = flat[3,k]; k2 = flat[4,k];
-        flat[3,k] = k1/(k1+k2)
-        flat[4,k] = (k1*k2)/((k1+k2)^2*(k1+k2+1))
-    end
-    return flat
-end
-
-
 # initial parameters
 const o1 = 1.405; # growth distribution
 const sig = 0.07;
@@ -118,11 +108,11 @@ const v = 0.2; #upper treshhold for division
 
 #prior distributions
 pri_gamma = Uniform(0,3);
-pri_beta = Uniform(8,24);
+pri_beta = Uniform(0,1);
 pri = Uniform(0,2);
 
 # generate data using defined model
-N = 252; #number of observations
+N = 249; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
@@ -136,7 +126,7 @@ scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 # applying the MH algo for the posterior Distribution
 numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 2000;
 logpost = x -> log_likeli(x,readdata) + log_prior(x);
-[x[1],x[2],x[3],x[4],x[5],u,v]
+
 x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
 
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
@@ -145,4 +135,3 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodval
 
 mod_chain, mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
 mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
-extract_beta!(mod_flatchain);
