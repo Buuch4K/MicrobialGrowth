@@ -63,7 +63,7 @@ function log_likeli(p::Vector,D::Data)
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log(p[5]/(p[6]+p[7])*(p[7] + D.mass[k]*exp(D.growth[k]*D.time[k]))) - (p[5]/(p[6]+p[7])*(D.mass[k]/D.growth[k]*(exp(D.growth[k])*D.time[k] - exp(D.growth[k]*t0)) + p[7]*(D.time[k] - t0)))
+                temp = log(p[5]/(p[6]+p[7])*(p[7] + D.mass[k]*exp(D.growth[k]*D.time[k]))) + (-p[5]/(p[6]+p[7])*(D.mass[k]/D.growth[k]*(exp(D.growth[k])*D.time[k] - exp(D.growth[k]*t0)) + p[7]*(D.time[k] - t0)))
             end
             like += temp
         end
@@ -109,7 +109,7 @@ const v = 0.2; #upper treshhold for division
 #prior distributions
 pri_gamma = Uniform(0,3);
 pri_beta = Uniform(0,1);
-pri = Uniform(0,2);
+pri = Uniform(0.1,2);
 
 # generate data using defined model
 N = 249; #number of observations
