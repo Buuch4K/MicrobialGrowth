@@ -109,7 +109,7 @@ const v = 0.2; #upper treshhold for division
 #prior distributions
 pri_gamma = Uniform(0,3);
 pri_beta = Uniform(0,1);
-pri = Uniform(0.1,2);
+pri = Uniform(0,2);
 
 # generate data using defined model
 N = 249; #number of observations
