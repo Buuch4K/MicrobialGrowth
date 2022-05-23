@@ -49,6 +49,8 @@ function log_likeli(p::Vector,D::Data)
     # p = [o1,sig,b1,b2,o2,u,v,c]
     if any(x->x.<0,p)
         return -Inf
+    elseif p[4] >= p[3]*(1-p[3])
+        return -Inf
     else
         like = 0.;
         for k = 1:length(D.time)
@@ -56,11 +58,11 @@ function log_likeli(p::Vector,D::Data)
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log(p[5]/(p[6]+p[7])*(p[7]+p[8]*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) + (-p[5]/(p[6]+p[7])*((p[8]*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-p[8]*D.mass[k])*D.time[k] + (p[8]*D.mass[k]-p[7])*t0))
+                temp = log(p[5]/(p[6]+p[7])*(p[7]+p[8]*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) - (p[5]/(p[6]+p[7])*((p[8]*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-p[8]*D.mass[k])*D.time[k] + (p[8]*D.mass[k]-p[7])*t0))
             end
             like += temp
         end
-        return like + sum([logpdf(Gamma(p[1]^2/p[2],p[2]/p[1]),D.growth[k]) for k = 1:length(D.growth)]) + sum([logpdf(Beta(p[3],p[4]),D.divratio[k]) for k = 1:length(D.divratio)])
+        return like + sum([logpdf(Gamma(p[1]^2/p[2],p[2]/p[1]),D.growth[k]) for k = 1:length(D.growth)]) + sum([logpdf(Beta(p[3]/p[4]*(p[3]*(1-p[3])-p[4]),(1-p[3])/p[4]*(p[3]*(1-p[3])-p[4])),D.divratio[k]) for k = 1:length(D.divratio)])
     end
 end
 
@@ -70,7 +72,7 @@ function log_prior(p::Vector)
     if p[6] >= p[7]
         return -Inf
     else
-        return sum([logpdf(pri_gamma,p[k]) for k=1:2]) + sum([logpdf(pri_beta,p[k]) for k=3:4]) + sum([logpdf(pri,p[k]) for k=5:7])
+        return sum([logpdf(pri_gamma,p[k]) for k=1:2])+ sum([logpdf(pri_beta,p[k]) for k=3:4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
     end
 end
 
@@ -88,35 +90,25 @@ function remove_stuck_chain(chain,llhood,nwalk::Int64)
 end
 
 
-function extract_beta!(flat::Matrix)
-    for k = 1:size(flat)[2]
-        b1 = flat[3,k]; b2 = flat[4,k];
-        flat[3,k] = b1/(b1+b2)
-        flat[4,k] = (b1*b2)/((b1+b2)^2*(b1+b2+1))
-    end
-    return flat
-end
-
-
 # initial parameters
-const o1 = 1.405; # growth distribution
+const o1 = 1.4; # growth distribution
 const sig = 0.05;
 
-const b1 = 0.5; # division distribution
-const b2 = 0.008;
+const b1 = 0.49; # division distribution
+const b2 = 0.0025;
 
 const o2 = 1.33; #hazard ratio
 const u = 0.4; #lower treshhold for division
-const v = 0.8; #upper treshhold for division
+const v = 1.8; #upper treshhold for division
 const c = 1.; #protein constant
 
 #prior distributions
-pri_gamma = Uniform(0,3);
-pri_beta = Uniform(8,24);
-pri = Uniform(0.2,5); # gendata (0,5), readdata (0.2,5)
+pri_gamma = Uniform(0,2);
+pri_beta = Uniform(0,1);
+pri = Uniform(0.2,2.5); # gendata (0,3), readdata (0.2,3)
 
 # generate data using defined model
-N = 252; #number of observations
+N = 249; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
@@ -126,9 +118,8 @@ readdata = read_data("data/modified_Susman18_physical_units.csv");
 plot_data(gendata)
 
 # applying the MH algo for the posterior Distribution
-numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 50000; burnin = 5000;
-logpost = x -> log_likeli([x[1],x[2],x[3],x[4],x[5],x[6],x[7],c],readdata) + log_prior([x[1],x[2],x[3],x[4],x[5],x[6],x[7],c]);
-
+numdims = 7; numwalkers = 40; thinning = 10; numsamples_perwalker = 60000; burnin = 20000;
+logpost = x -> log_likeli(vcat(x,c),readdata) + log_prior(vcat(x,c));
 
 x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
@@ -137,4 +128,3 @@ flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodval
 
 mod_chain, mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
 mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
-beta_distr = extract_beta(mod_flatchain);
