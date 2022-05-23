@@ -102,14 +102,14 @@ const sig = 0.07;
 const b1 = 0.5; # division distribution
 const b2 = 0.008;
 
-const o2 = 0.12; #hazard rate functions constant
-const u = 0.09; #lower treshhold for division
-const v = 0.2; #upper treshhold for division
+const o2 = 1.33; #hazard rate functions constant
+const u = 0.2; #lower treshhold for division
+const v = 4.; #upper treshhold for division
 
 #prior distributions
-pri_gamma = Uniform(0,3);
+pri_gamma = Uniform(0,5);
 pri_beta = Uniform(0,1);
-pri = Uniform(0,2);
+pri = Uniform(0,14);
 
 # generate data using defined model
 N = 249; #number of observations
@@ -119,13 +119,13 @@ gendata = generate_data(m0,N);
 # read data from dataset
 readdata = read_data("data/modified_Susman18_physical_units.csv");
 
-plot_data(gendata)
+plot_data(readdata)
 
 scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
 
 # applying the MH algo for the posterior Distribution
-numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 2000;
-logpost = x -> log_likeli(x,readdata) + log_prior(x);
+numdims = 6; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 2000;
+logpost = x -> log_likeli(vcat(x,v),readdata) + log_prior(vcat(x,v));
 
 x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta,2,numwalkers),rand(pri,numdims-4,numwalkers));
 
