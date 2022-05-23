@@ -29,4 +29,3 @@ SimpleMCMC.jl
 
 # ignoring all plots
 *.png
-*.jld
