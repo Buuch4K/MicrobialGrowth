@@ -31,7 +31,8 @@ end
 
 function read_data(filename::String)
     data = CSV.File(filename,select=["lineage_ID","generationtime","length_birth","growth_rate"]);
-    return Data(data.generationtime,data.length_birth,[1/2 for i=1:/(N-1)],[o1 for i=1:N])
+    N = length(data.generationtime);
+    return Data(data.generationtime,data.length_birth,[1/2 for i=1:(N-1)],[1. for i=1:N])
 end
 
 
@@ -116,7 +117,7 @@ const v = 5.; #upper treshhold for division
 pri = Uniform(0,14);
 
 # initial parameters for the data generation
-N = 252; #number of observations
+N = 250; #number of observations
 m0 = 2.4; #initial size
 gendata = generate_data(m0,N);
 
