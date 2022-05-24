@@ -72,7 +72,7 @@ function log_prior(p::Vector)
     if p[6] >= p[7]
         return -Inf
     else
-        return sum([logpdf(pri_gamma,p[k]) for k=1:2])+ sum([logpdf(pri_beta,p[k]) for k=3:4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
+        return sum([logpdf(pri_gamma,p[k]) for k=1:2]) + logpdf(pri_beta1,p[3]) + logpdf(pri_beta2,p[4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
     end
 end
 
@@ -104,7 +104,8 @@ const c = 1.; #protein constant
 
 #prior distributions
 pri_gamma = Uniform(0,2);
-pri_beta = Uniform(0,1);
+pri_beta1 = Uniform(0.4,0.6);
+pri_beta2 = Uniform(0,0.2);
 pri = Uniform(0,3); # gendata (0,3), readdata (0.2,3)
 
 # generate data using defined model
