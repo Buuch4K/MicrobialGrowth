@@ -109,7 +109,7 @@ pri_sigma = Uniform(0,0.2);
 pri = Uniform(0.2,1.8); # gendata (0,3), readdata (0.2,3)
 
 # generate data using defined model
-N = 249; #number of observations
+N = 250; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 

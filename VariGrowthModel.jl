@@ -123,7 +123,7 @@ pri_beta2 = Uniform(0,0.2);
 pri = Uniform(0,5);
 
 # generate data using defined model
-N = 249; #number of observations
+N = 250; #number of observations
 m0 = 2.6; #initial mass of cell
 gendata = generate_data(m0,N);
 
