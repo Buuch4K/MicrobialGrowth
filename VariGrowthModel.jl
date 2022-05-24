@@ -77,7 +77,7 @@ function log_prior(p::Vector)
     if p[6] >= p[7]
         return -Inf
     else
-        return sum([logpdf(pri_gamma,p[k]) for k=1:2]) + logpdf(pri_beta1,p[3]) + logpdf(pri_beta2,p[4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
+        return logpdf(pri_gamma,p[1]) + logpdf(pri_sigma,p[2]) + logpdf(pri_beta,p[3]) + logpdf(pri_sigma,p[4]) + sum([logpdf(pri,p[k]) for k=5:length(p)])
     end
 end
 
@@ -106,20 +106,20 @@ end
 
 
 # initial parameters
-const o1 = 1.405; # growth distribution
-const sig = 0.07;
+const o1 = 1.4; # growth distribution
+const sig = 0.05;
 
 const b1 = 0.5; # division distribution
-const b2 = 0.0025;
+const b2 = 0.002;
 
-const o2 = 1.33; #hazard rate functions constant
-const u = 0.2; #lower treshhold for division
-const v = 4.; #upper treshhold for division
+const o2 = 2.; #hazard rate functions constant
+const u = 2.8; #lower treshhold for division
+const v = 3.; #upper treshhold for division
 
 #prior distributions
 pri_gamma = Uniform(0,3);
-pri_beta1 = Uniform(0.4,0.6);
-pri_beta2 = Uniform(0,0.2);
+pri_beta = Uniform(0.4,0.6); 
+pri_sigma = Uniform(0,0.2); 
 pri = Uniform(0,5);
 
 # generate data using defined model
@@ -132,13 +132,13 @@ readdata = read_data("data/modified_Susman18_physical_units.csv");
 
 plot_data(readdata)
 
-scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]))
+scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]),label=false)
 
 # applying the MH algo for the posterior Distribution
 numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 2000;
 logpost = x -> log_likeli(x,readdata) + log_prior(x);
 
-x = vcat(rand(pri_gamma,2,numwalkers),rand(pri_beta1,1,numwalkers),rand(pri_beta2,1,numwalkers),rand(pri,numdims-4,numwalkers));
+x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri,numdims-4,numwalkers));
 
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
