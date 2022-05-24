@@ -110,7 +110,7 @@ const o1 = 1.405; # growth distribution
 const sig = 0.07;
 
 const b1 = 0.5; # division distribution
-const b2 = 0.008;
+const b2 = 0.0025;
 
 const o2 = 1.33; #hazard rate functions constant
 const u = 0.2; #lower treshhold for division
