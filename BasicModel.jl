@@ -114,7 +114,7 @@ const u = 0.2; #lower treshhold for division
 const v = 5.; #upper treshhold for division
 
 # define prior distribution
-pri = Uniform(0,14);
+pri = Uniform(2,10);
 
 # initial parameters for the data generation
 N = 250; #number of observations
