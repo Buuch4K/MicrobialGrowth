@@ -106,7 +106,7 @@ const c = 1.; #protein constant
 pri_gamma = Uniform(0.8,1.8);
 pri_beta = Uniform(0.4,0.6);
 pri_sigma = Uniform(0,0.2);
-pri = Uniform(0.2,1.8); # gendata (0,3), readdata (0.2,3)
+pri = Uniform(0.2,1.8); # gendata (0,3), readdata (0.2,1.8)
 
 # generate data using defined model
 N = 250; #number of observations
