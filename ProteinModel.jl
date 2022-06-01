@@ -95,11 +95,11 @@ const o1 = 1.4; # growth distribution
 const sig = 0.05;
 
 const b1 = 0.49; # division distribution
-const b2 = 0.0025;
+const b2 = 0.002;
 
 const o2 = 1.33; #hazard ratio
 const u = 0.4; #lower treshhold for division
-const v = 1.8; #upper treshhold for division
+const v = 0.8; #upper treshhold for division
 const c = 1.; #protein constant
 
 #prior distributions
