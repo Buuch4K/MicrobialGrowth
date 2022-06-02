@@ -25,14 +25,14 @@ function generate_data(si,N)
         next_size = (X[i] * exp(o1*Y[i]))/2;
         push!(X, next_size)
     end
-    return Data(Y,X[1:N],[1/2 for i=1:N-1],[o1 for i=1:N])
+    return Data(Y,X[1:N],[1/2 for i=1:N],[o1 for i=1:N])
 end
 
 
 function read_data(filename::String)
     data = CSV.File(filename,select=["lineage_ID","generationtime","length_birth","growth_rate"]);
     N = length(data.generationtime);
-    return Data(data.generationtime,data.length_birth,[1/2 for i=1:(N-1)],[1. for i=1:N])
+    return Data(data.generationtime,data.length_birth,[1/2 for i=1:N],[1. for i=1:N])
 end
 
 

@@ -22,13 +22,14 @@ function generate_data(si::Float64,num::Int64)
         next_size = X[n] * exp(alpha[n]*Y[n]) * f[n]
         push!(X, next_size)
     end
-    return Data(Y,alpha,X[1:num],f[1:num-1])
+    return Data(Y,alpha,X[1:num],f[1:num])
 end
 
 
 function read_data(filename::String)
     data = CSV.File(filename, select = ["growth_rate","generationtime","length_birth","division_ratio"]);
-    return Data(data.generationtime,data.growth_rate,data.length_birth,data.division_ratio[2:end])
+    div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],0.49));
+    return Data(data.generationtime,data.growth_rate,data.length_birth,div_ratio)
 end
 
 
