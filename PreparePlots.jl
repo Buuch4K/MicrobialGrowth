@@ -17,7 +17,7 @@ corrplot(ex_read,label=["f","alpha","tau"],tickfontsize=4,guidefontsize=6)
 
 # scatter the three important data values to see their dependencies
 scatter(readdata.divratio,readdata.growth,readdata.time,label="read");
-scatter!(gendata.divratio,gendata.growth,gendata,time,label="synthetic");
+scatter!(gendata.divratio,gendata.growth,gendata.time,label="synthetic");
 plot!(xlabel="f",ylabel="alpha",zlabel="tau")
 
 
