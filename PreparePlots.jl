@@ -20,6 +20,10 @@ scatter(readdata.divratio,readdata.growth,readdata.time,label="read");
 scatter!(gendata.divratio,gendata.growth,gendata.time,label="synthetic");
 plot!(xlabel="f",ylabel="alpha",zlabel="tau")
 
+# scatter the claimed formula between f, alpha and tau.
+scatter(gendata.divratio .* exp.(gendata.growth[2:end].*gendata.time[2:end]),label=false)
+
+
 
 # save the real world and synthetic data with mle estimates to a csv file
 CSV.write("pmsyn.csv",DataFrame(f=ex_gen[:,1],alpha=ex_gen[:,2],tau=ex_gen[:,3]));
