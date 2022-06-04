@@ -8,7 +8,7 @@ struct Data
 end
 
 
-function generate_data(si,N)
+function generate_data(si::Float64,N::Int64)
     #= this function computes a synthetic data set of size N and initial cell size si.
     Input:  si - initial cell size
             N - number of division times
@@ -108,7 +108,7 @@ function log_prior(p::Vector)
 end
 
 
-function remove_stuck_chain(chain,llhood,nwalk)
+function remove_stuck_chain(chain,llhood,nwalk::Int64)
     #= This function removes chains from the result which always contain the same value, i.e. are stuck.
     Input:  chain - realization of the sampler,
             llhood - corresponding likelihood values,
@@ -163,7 +163,7 @@ x = rand(pri,numdims,numwalkers); # define initial points
 chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 chain, llhood = remove_stuck_chain(chain,llhood,numwalkers);
-BMreal_flatchain, BMreal_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+BMreal_flatchain, BMreal_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhood);
 
 # plotting the correlation plots for both simulations
 corrplot(transpose(BMsyn_flatchain),title="synthetic data",label=["o1","o2","u","v"],tickfontsize=4,guidefontsize=6)

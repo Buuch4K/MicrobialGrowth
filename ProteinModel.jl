@@ -9,6 +9,11 @@ end
 
 
 function generate_data(si::Float64,num::Int64)
+    #= this function computes a synthetic data set of size num and initial cell size si.
+    Input:  si - initial cell size
+            num - number of division times
+    Output: object DATA containing the data set
+    =#
     X = Float64[si];
     Y = Array{Float64}(undef,num);
     k = rand(Uniform(0,1),num);
@@ -27,13 +32,16 @@ end
 
 
 function read_data(filename::String)
+    # this function takes the memory location of the csv file containing the real world data and
+    # returns the values in an object DATA
     data = CSV.File(filename, select = ["growth_rate","generationtime","length_birth","division_ratio"]);
-    div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],0.49));
+    div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],mean(data.division_ratio[2:end])));
     return Data(data.generationtime,data.growth_rate,data.length_birth,div_ratio)
 end
 
 
 function plot_data(D::Data)
+    # This function takes a dataset as input and visualizes the timeseries of the growth and division process.
     n = length(D.time)
     t = Array{Float64}(undef,n*10);
     result = Array{Float64}(undef,n*10);
@@ -47,6 +55,7 @@ end
 
 
 function log_likeli(p::Vector,D::Data)
+    # This function takes all parameters and a dataset as input and returns the likelihood.
     # p = [o1,sig,b1,b2,o2,u,v,c]
     if any(x->x.<0,p)
         return -Inf
@@ -69,6 +78,7 @@ end
 
 
 function log_prior(p::Vector)
+    # this function takes all parameters as input and returns the log_prior value.
     # p = [o1,sig,b1,b2,o2,u,v,c]
     if p[6] >= p[7]
         return -Inf
@@ -79,6 +89,12 @@ end
 
 
 function remove_stuck_chain(chain,llhood,nwalk::Int64)
+    #= This function removes chains from the result which always contain the same value, i.e. are stuck.
+    Input:  chain - realization of the sampler,
+            llhood - corresponding likelihood values,
+            nwalk - number of parallel chains
+    Output: chain, llhood
+    =#
     bad_idx = []; 
     for k=1:nwalk
         if all(y -> y == first(chain[2,k,:]), chain[2,k,:])
@@ -107,7 +123,7 @@ const c = 1.; #protein constant
 pri_gamma = Uniform(0.8,1.8);
 pri_beta = Uniform(0.4,0.6);
 pri_sigma = Uniform(0,0.2);
-pri = Uniform(0.2,1.8); # gendata (0,3), readdata (0.2,1.8)
+pri = Uniform(0,3);
 
 # generate data using defined model
 N = 250; #number of observations
@@ -119,14 +135,21 @@ readdata = read_data("data/modified_Susman18_physical_units.csv");
 
 plot_data(gendata)
 
-# applying the MH algo for the posterior Distribution
+# sampling all parameters using SYNTHETIC data
 numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 60000; burnin = 6000;
-logpost = x -> log_likeli(vcat(x,c),readdata) + log_prior(vcat(x,c));
-
+logpost = x -> log_likeli(vcat(x,c),gendata) + log_prior(vcat(x,c));
 x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri,numdims-4,numwalkers));
-chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
-flatchain, flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
-mod_chain, mod_llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
-mod_flatchain, mod_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(mod_chain,mod_llhoodvals);
+chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
+chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+chain, llhood = remove_stuck_chain(chain,llhood,numwalkers);
+PMsyn_flatchain, PMsyn_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhood);
+
+# sampling all parameters using REAL data
+pri = Uniform(0.2,1.8); logpost = x -> log_likeli(vcat(x,c),readdata) + log_prior(vcat(x,c));
+x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri,numdims-4,numwalkers));
+
+chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
+chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+chain, llhood = remove_stuck_chain(chain,llhood,numwalkers);
+PMreal_flatchain, PMreal_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhood);
