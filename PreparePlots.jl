@@ -15,5 +15,12 @@ ex_read[:,3] = readdata.time;
 
 corrplot(ex_read,label=["f","alpha","tau"],tickfontsize=4,guidefontsize=6)
 
+# scatter the three important data values to see their dependencies
+scatter(readdata.divratio,readdata.growth,readdata.time,label="read");
+scatter!(gendata.divratio,gendata.growth,gendata,time,label="synthetic");
+plot!(xlabel="f",ylabel="alpha",zlabel="tau")
+
+
+# save the real world and synthetic data with mle estimates to a csv file
 CSV.write("pmsyn.csv",DataFrame(f=ex_gen[:,1],alpha=ex_gen[:,2],tau=ex_gen[:,3]));
 CSV.write("pmreal.csv",DataFrame(f=ex_read[:,1],alpha=ex_read[:,2],tau=ex_read[:,3]));
