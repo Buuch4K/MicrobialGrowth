@@ -26,6 +26,12 @@ Manifest.toml
 Metropolis-Hastings-Example.jl
 SimpleMCMC.jl
 
+#ignoring csv files for matlab plotting
+vmreal.csv
+vmsyn.csv
+pmreal.csv
+pmsyn.csv
+
 
 # ignoring all plots
 *.png
