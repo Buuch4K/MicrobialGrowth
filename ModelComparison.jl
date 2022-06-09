@@ -7,15 +7,19 @@ struct Data
     divratio
 end
 
-function read_split_data(filename::String,test_size = 100)
+function read_data(filename::String)
     data = CSV.File(filename,select=["growth_rate","generationtime","length_birth","division_ratio"]);
-    div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],0.49));
-    test_idx = sort(rand(1:length(data.generationtime),test_size));
-    train_idx = setdiff(1:length(data.generationtime),test_idx);
-    all = Data(data.generationtime,data.growth_rate,data.length_birth,div_ratio);
-    train = Data(data.generationtime[train_idx],data.growth_rate[train_idx],data.length_birth[train_idx],div_ratio[train_idx]);
-    test = Data(data.generationtime[test_idx],data.growth_rate[test_idx],data.length_birth[test_idx],div_ratio[test_idx]);
-    return all,train,test
+    div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],mean(data.division_ratio[2:end])));
+    return Data(data.generationtime,data.growth_rate,data.length_birth,div_ratio);
+end
+
+
+function split_data(all::Data,test_size = 100)
+    test_idx = sort(rand(1:length(all.time),test_size));
+    train_idx = setdiff(1:length(all.time),test_idx);
+    train = Data(all.time[train_idx],all.growth[train_idx],all.mass[train_idx],all.divratio[train_idx]);
+    test = Data(all.time[test_idx],all.growth[test_idx],all.mass[test_idx],all.divratio[test_idx]);
+    return train,test
 end
 
 
@@ -125,56 +129,74 @@ end
 
 
 
-#### global setup
-all_data,train_data,test_data = read_split_data("data/modified_Susman18_physical_units.csv")
-
+#################### global setup
+all_data = read_data("data/modified_Susman18_physical_units.csv");
+const max_iter = 10;
 
 #################### Compute posterior and predictive density of basic model
-pri_bm = Uniform(2,10);
+pri_bm = Uniform(2,10); 
 numdims = 4; numwalkers = 20; thinning = 10; numsamples_perwalker = 20000; burnin = 2000;
-bm_logpost = x -> bm_loglikeli(x, train_data) + bm_logprior(x);
+bm_pd = Array{Float64}(undef,max_iter);
 
-x = rand(pri_bm,numdims,numwalkers);
-chain, llhoodvals = AffineInvariantMCMC.sample(bm_logpost,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(bm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
-chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
-bm_flatchain,bm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+for k=1:max_iter
+    println("STATUS: $k. iteration of $max_iter");
 
-bm_mle = bm_flatchain[:,argmax(bm_flatllhood)]; # maximum likelihood estimates
-bm_aic = 2*numdims - 2*bm_loglikeli(bm_mle,train_data)
+    train_data,test_data = split_data(all_data);
+    bm_logpost = x -> bm_loglikeli(x, train_data) + bm_logprior(x);
+    x = rand(pri_bm,numdims,numwalkers);
 
-bm_pd = bm_loglikeli(bm_mle,test_data)
+    chain, llhoodvals = AffineInvariantMCMC.sample(bm_logpost,numwalkers,x,burnin,1);
+    chain, llhoodvals = AffineInvariantMCMC.sample(bm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+    chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
+    bm_flatchain,bm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+
+    bm_mle = bm_flatchain[:,argmax(bm_flatllhood)]; # maximum likelihood estimates
+    bm_pd[k] = bm_loglikeli(bm_mle,test_data);
+end
+bm_pd_mean = mean(deleteat!(bm_pd,findall(x->x==-Inf,bm_pd))); # 59.606
+
 
 #################### Compute posterior and predictive density of varying growth and division model
 pri_gamma = Uniform(0,3);pri_beta = Uniform(0.4,0.6);pri_sigma = Uniform(0,0.2);pri_vm = Uniform(0,5);
 numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 40000; burnin = 4000;
-vm_logpost = x -> vm_loglikeli(x, train_data) + vm_logprior(x);
+vm_pd = Array{Float64}(undef,max_iter);
 
-x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_vm,numdims-4,numwalkers));
-chain, llhoodvals = AffineInvariantMCMC.sample(vm_logpost,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(vm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
-chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
-vm_flatchain, vm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+for k=1:max_iter
+    println("STATUS: $k. iteration of $max_iter");
+    
+    train_data,test_data = split_data(all_data);
+    vm_logpost = x -> vm_loglikeli(x, train_data) + vm_logprior(x);
+    x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_vm,numdims-4,numwalkers));
+    
+    chain, llhoodvals = AffineInvariantMCMC.sample(vm_logpost,numwalkers,x,burnin,1);
+    chain, llhoodvals = AffineInvariantMCMC.sample(vm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+    chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
+    vm_flatchain, vm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
-vm_mle = vm_flatchain[:,argmax(vm_flatllhood)]; # maximum likelihood estimates
-bm_aic = 2*numdims - 2*vm_loglikeli(vm_mle,train_data)
-
-vm_pd = vm_loglikeli(vm_mle,test_data)
+    vm_mle = vm_flatchain[:,argmax(vm_flatllhood)]; # maximum likelihood estimates
+    vm_pd[k] = vm_loglikeli(vm_mle,test_data);
+end
+vm_pd_mean = mean(deleteat!(vm_pd,findall(x->x==-Inf,vm_pd))); # 201.438
 
 
 #################### Compute posterior and predictive density of protein model
 pri_gamma = Uniform(0.8,1.8);pri_pm = Uniform(0.2,1.8);
 const c = 1.; numdims = 7; numwalkers = 20; thinning = 10; numsamples_perwalker = 60000; burnin = 6000;
-pm_logpost = x -> pm_loglikeli(vcat(x,c),train_data) + pm_logprior(vcat(x,c));
+pm_pd = Array{Float64}(undef,max_iter);
 
-x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_pm,numdims-4,numwalkers));
-chain, llhoodvals = AffineInvariantMCMC.sample(pm_logpost,numwalkers,x,burnin,1);
-chain, llhoodvals = AffineInvariantMCMC.sample(pm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
-chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
-pm_flatchain, pm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
+for k=1:max_iter
+    println("STATUS: $k. iteration of $max_iter");
 
-pm_mle = pm_flatchain[:,argmax(pm_flatllhood)]; # maximum likelihood estimates
-pm_aic = 2*numdims - 2*pm_loglikeli(vcat(pm_mle,c),train_data)
+    train_data,test_data = split_data(all_data);
+    pm_logpost = x -> pm_loglikeli(vcat(x,c),train_data) + pm_logprior(vcat(x,c));
+    x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_pm,numdims-4,numwalkers));
 
-pm_pd = pm_loglikeli(vcat(pm_mle,c),test_data)
+    chain, llhoodvals = AffineInvariantMCMC.sample(pm_logpost,numwalkers,x,burnin,1);
+    chain, llhoodvals = AffineInvariantMCMC.sample(pm_logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
+    chain, llhoodvals = remove_stuck_chain(chain,llhoodvals,numwalkers);
+    pm_flatchain, pm_flatllhood = AffineInvariantMCMC.flattenmcmcarray(chain,llhoodvals);
 
+    pm_mle = pm_flatchain[:,argmax(pm_flatllhood)]; # maximum likelihood estimates
+    pm_pd[k] = pm_loglikeli(vcat(pm_mle,c),test_data);
+end
+pm_pd_mean = mean(deleteat!(pm_pd,findall(x->x<0,pm_pd))); # 240.854
