@@ -26,12 +26,19 @@ Manifest.toml
 Metropolis-Hastings-Example.jl
 SimpleMCMC.jl
 
-#ignoring csv files for matlab plotting
+# ignoring csv files for matlab plotting
 vmreal.csv
 vmsyn.csv
 pmreal.csv
 pmsyn.csv
 
+# ignoring csv files for python plotting
+bmsyn_flatchain.csv
+bmreal_flatchain.csv
+vmsyn_flatchain.csv
+vmreal_flatchain.csv
+pmsyn_flatchain.csv
+pmreal_flatchain.csv
 
 # ignoring all plots
 *.png
