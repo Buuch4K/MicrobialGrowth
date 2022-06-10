@@ -106,11 +106,11 @@ function pm_loglikeli(p::Vector,D::Data)
     else
         like = 0.;
         for k = 1:length(D.time)
-            t0 = max(0,1/D.growth[k]*log((p[6]+p[8]*D.mass[k])/(p[8]*D.mass[k])))
+            t0 = max(0,1/D.growth[k]*log((p[6]+c*D.mass[k])/(c*D.mass[k])))
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log(p[5]/(p[6]+p[7])*(p[7]+p[8]*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) + (-p[5]/(p[6]+p[7])*((p[8]*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-p[8]*D.mass[k])*D.time[k] + (p[8]*D.mass[k]-p[7])*t0))
+                temp = log(p[5]/(p[6]+p[7])*(p[7]+c*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) + (-p[5]/(p[6]+p[7])*((c*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-c*D.mass[k])*D.time[k] + (c*D.mass[k]-p[7])*t0))
             end
             like += temp
         end
@@ -119,7 +119,7 @@ function pm_loglikeli(p::Vector,D::Data)
 end
 
 function pm_logprior(p::Vector)
-    # p = [o1,sig,b1,b2,o2,u,v,c]
+    # p = [o1,sig,b1,b2,o2,u,v]
     if p[6] > p[7]
         return -Inf
     else
@@ -131,7 +131,7 @@ end
 
 #################### global setup
 all_data = read_data("data/modified_Susman18_physical_units.csv");
-const max_iter = 10;
+const max_iter = 20;
 
 #################### Compute posterior and predictive density of basic model
 pri_bm = Uniform(2,10); 
@@ -153,7 +153,7 @@ for k=1:max_iter
     bm_mle = bm_flatchain[:,argmax(bm_flatllhood)]; # maximum likelihood estimates
     bm_pd[k] = bm_loglikeli(bm_mle,test_data);
 end
-bm_pd_mean = mean(deleteat!(bm_pd,findall(x->x==-Inf,bm_pd))); # 59.606
+bm_pd_mean = mean(deleteat!(bm_pd,findall(x->x<0,bm_pd))) # 59.606 / 61.570
 
 
 #################### Compute posterior and predictive density of varying growth and division model
@@ -176,7 +176,7 @@ for k=1:max_iter
     vm_mle = vm_flatchain[:,argmax(vm_flatllhood)]; # maximum likelihood estimates
     vm_pd[k] = vm_loglikeli(vm_mle,test_data);
 end
-vm_pd_mean = mean(deleteat!(vm_pd,findall(x->x==-Inf,vm_pd))); # 201.438
+vm_pd_mean = mean(deleteat!(vm_pd,findall(x->x<0,vm_pd))) # 201.438 / 197.248
 
 
 #################### Compute posterior and predictive density of protein model
@@ -188,7 +188,7 @@ for k=1:max_iter
     println("STATUS: $k. iteration of $max_iter");
 
     train_data,test_data = split_data(all_data);
-    pm_logpost = x -> pm_loglikeli(vcat(x,c),train_data) + pm_logprior(vcat(x,c));
+    pm_logpost = x -> pm_loglikeli(x,train_data) + pm_logprior(x);
     x = vcat(rand(pri_gamma,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_beta,1,numwalkers),rand(pri_sigma,1,numwalkers),rand(pri_pm,numdims-4,numwalkers));
 
     chain, llhoodvals = AffineInvariantMCMC.sample(pm_logpost,numwalkers,x,burnin,1);
@@ -199,4 +199,4 @@ for k=1:max_iter
     pm_mle = pm_flatchain[:,argmax(pm_flatllhood)]; # maximum likelihood estimates
     pm_pd[k] = pm_loglikeli(vcat(pm_mle,c),test_data);
 end
-pm_pd_mean = mean(deleteat!(pm_pd,findall(x->x<0,pm_pd))); # 240.854
+pm_pd_mean = mean(deleteat!(pm_pd,findall(x->x<0,pm_pd))) # 240.854 / 232.833
