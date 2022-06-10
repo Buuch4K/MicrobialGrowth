@@ -153,3 +153,9 @@ chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,x,burnin,1);
 chain, llhood = AffineInvariantMCMC.sample(logpost,numwalkers,chain[:, :, end],numsamples_perwalker,thinning);
 chain, llhood = remove_stuck_chain(chain,llhood,numwalkers);
 PMreal_flatchain, PMreal_flatllhoodvals = AffineInvariantMCMC.flattenmcmcarray(chain,llhood);
+
+
+# plotting the correlation plots for both simulations
+corrplot(transpose(PMsyn_flatchain),title="synthetic data",label=["mu_a","sigma_a","mu_f","sigma_f","o2","u","v"],tickfontsize=4,guidefontsize=6)
+
+corrplot(transpose(PMreal_flatchain),title="real world data",label=["mu_a","sigma_a","mu_f","sigma_f","o2","u","v"],tickfontsize=4,guidefontsize=6)
