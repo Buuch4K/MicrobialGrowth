@@ -56,7 +56,7 @@ end
 
 function log_likeli(p::Vector,D::Data)
     # This function takes all parameters and a dataset as input and returns the likelihood.
-    # p = [o1,sig,b1,b2,o2,u,v,c]
+    # p = [o1,sig,b1,b2,o2,u,v]
     if any(x->x.<0,p)
         return -Inf
     elseif p[4] >= p[3]*(1-p[3])
@@ -64,11 +64,11 @@ function log_likeli(p::Vector,D::Data)
     else
         like = 0.;
         for k = 1:length(D.time)
-            t0 = max(0,1/D.growth[k]*log((p[6]+p[8]*D.mass[k])/(p[8]*D.mass[k])))
+            t0 = max(0,1/D.growth[k]*log((p[6]+c*D.mass[k])/(c*D.mass[k])))
             if D.time[k] < t0
                 return -Inf
             else
-                temp = log(p[5]/(p[6]+p[7])*(p[7]+p[8]*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) + (-p[5]/(p[6]+p[7])*((p[8]*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-p[8]*D.mass[k])*D.time[k] + (p[8]*D.mass[k]-p[7])*t0))
+                temp = log(p[5]/(p[6]+p[7])*(p[7]+c*D.mass[k]*(exp(D.growth[k]*D.time[k])-1))) + (-p[5]/(p[6]+p[7])*((c*D.mass[k])/D.growth[k]*(exp(D.growth[k]*D.time[k]) - exp(D.growth[k]*t0)) + (p[7]-c*D.mass[k])*D.time[k] + (c*D.mass[k]-p[7])*t0))
             end
             like += temp
         end
@@ -79,7 +79,7 @@ end
 
 function log_prior(p::Vector)
     # this function takes all parameters as input and returns the log_prior value.
-    # p = [o1,sig,b1,b2,o2,u,v,c]
+    # p = [o1,sig,b1,b2,o2,u,v]
     if p[6] >= p[7]
         return -Inf
     else
