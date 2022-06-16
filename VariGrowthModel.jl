@@ -114,12 +114,12 @@ end
 
 # initial parameters
 const o1 = 1.4; # growth distribution
-const sig = 0.05;
+const sig = 0.04;
 
 const b1 = 0.5; # division distribution
 const b2 = 0.002;
 
-const o2 = 2.; #hazard rate functions constant
+const o2 = 2.6; #hazard rate functions constant
 const u = 2.8; #lower treshhold for division
 const v = 3.; #upper treshhold for division
 
