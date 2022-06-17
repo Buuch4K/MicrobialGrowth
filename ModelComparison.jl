@@ -1,4 +1,4 @@
-using JLD2, Plots, StatsPlots, Distributions, Statistics, AffineInvariantMCMC, CSV
+using JLD2, Plots, StatsPlots, Distributions, Statistics, AffineInvariantMCMC, CSV, JLD2, DataFrames
 
 struct Data
     time
@@ -6,6 +6,84 @@ struct Data
     mass
     divratio
 end
+
+
+function basic_generate_data(si::Float64,N::Int64)
+    #= this function computes a synthetic data set of size N and initial cell size si.
+    Input:  si - initial cell size
+            N - number of division times
+    Output: object DATA containing the data set
+    =#
+    X = Float64[si]; #sizes of the cell at division
+    Y = Array{Float64}(undef,N); #division times
+    k = rand(Uniform(0,1),N);
+    for i = 1:N
+        if X[i] < u
+            t0 = 1/o1*log(u/X[i])
+            f = t -> log(k[i]) + o2/(v+u)*(u/o1*exp(o1*t) + v*t - u/o1)
+        else
+            t0 = 0.
+            f = t -> log(k[i]) + o2/(v+u)*(X[i]/o1*exp(o1*t) + v*t - X[i]/o1)
+        end
+        fx = ZeroProblem(f, 1);
+        Y[i] = solve(fx) + t0;
+        next_size = (X[i] * exp(o1*Y[i]))/2;
+        push!(X, next_size)
+    end
+    return Data(Y,X[1:N],[1/2 for i=1:N],[o1 for i=1:N])
+end
+
+
+function varying_generate_data(si::Float64,num::Int64)
+    #= this function computes a synthetic data set of size num and initial cell size si.
+    Input:  si - initial cell size
+            num - number of division times
+    Output: object DATA containing the data set
+    =#
+    X = Float64[si];
+    Y = Array{Float64}(undef,num);
+    k = rand(Uniform(0,1),num);
+    alpha = rand(Gamma(o1^2/sig,sig/o1),num);
+    f = rand(Beta((b1^2*(1-b1)-b2*b1)/b2,(b1*(1-b1)^2-b2*(1-b1))/b2),num);
+    for n = 1:num
+        if X[n] < u
+            t0 = 1/alpha[n]*log(u/X[n]);
+            h = t -> log(k[n]) + o2/(v+u)*(u/alpha[n]*exp(alpha[n]*t) + v*t - u/alpha[n])
+        else
+            t0 = 0;
+            h = t -> log(k[n]) + o2/(v+u)*(X[n]/alpha[n]*exp(alpha[n]*t) + v*t - X[n]/alpha[n])
+        end
+        hx = ZeroProblem(h, 1)
+        Y[n] = solve(hx)+t0;
+        next_size = X[n] * exp(alpha[n]*Y[n]) * f[n]
+        push!(X, next_size)
+    end
+    return Data(Y,alpha,X[1:num],f[1:num]) 
+end
+
+
+function protein_generate_data(si::Float64,num::Int64)
+    #= this function computes a synthetic data set of size num and initial cell size si.
+    Input:  si - initial cell size
+            num - number of division times
+    Output: object DATA containing the data set
+    =#
+    X = Float64[si];
+    Y = Array{Float64}(undef,num);
+    k = rand(Uniform(0,1),num);
+    alpha = rand(Gamma(o1^2/sig,sig/o1),num);
+    f = rand(Beta((b1^2*(1-b1)-b2*b1)/b2,(b1*(1-b1)^2-b2*(1-b1))/b2),num);
+    for n = 1:num
+        t0 = 1/alpha[n]*log((u+c*X[n])/(c*X[n]));
+        h = t -> log(k[n]) + o2/(u+v)*((c*X[n])/alpha[n]*exp(alpha[n]*(t+t0)) - c*X[n]*t + v*t - (c*X[n])/alpha[n]*exp(alpha[n]*t0))
+        hx = ZeroProblem(h, 1)
+        Y[n] = solve(hx)+t0;
+        next_size = X[n] * exp(alpha[n]*Y[n]) * f[n]
+        push!(X, next_size)
+    end
+    return Data(Y,alpha,X[1:num],f[1:num])
+end
+
 
 function read_data(filename::String)
     # reads the data from a csv file and returns an object Data
@@ -209,3 +287,31 @@ for k=1:max_iter
     pm_pd[k] = pm_loglikeli(pm_mle,test_data);
 end
 pm_pd_mean = mean(deleteat!(pm_pd,findall(x->x<0,pm_pd))) # 240.854 / 232.833 / 232.408
+
+
+########## basic model forward simulation to compare data distributions
+@load "bmreal.jld"
+const o1,o2,u,v = BMreal_flatchain[:,argmax(BMreal_flatllhood)];
+bm_gendata = basic_generate_data(2.6,2500);
+
+histogram([BMreal_data.time,gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.05:1.3)
+
+
+########## varying growth and division model forward simulation to compare data distributions
+@load "vmreal.jld"
+const o1,sig,b1,b2,o2,u,v = VMreal_flatchain[:,argmax(VMreal_flatllhood)];
+vm_gendata = varying_generate_data(2.6,2500);
+
+histogram([VMreal_data.growth,vm_gendata.growth],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.5:0.05:2.75)
+histogram([VMreal_data.divratio,vm_gendata.divratio],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.3:0.01:0.7)
+histogram([VMreal_data.time,vm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.05:1.6)
+
+
+########## protein model forward simulation to compare data distributions
+@load "pmreal.jld"
+const o1,sig,b1,b2,o2,u,v = PMreal_flatchain[:,argmax(PMreal_flatllhood)]; const c=1;
+pm_gendata = protein_generate_data(2.6,2500);
+
+histogram([PMreal_data.growth,pm_gendata.growth],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.5:0.05:2.75)
+histogram([PMreal_data.divratio,pm_gendata.divratio],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.3:0.01:0.7)
+histogram([PMreal_data.time,pm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.025:1.6)
