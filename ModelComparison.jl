@@ -8,6 +8,7 @@ struct Data
 end
 
 function read_data(filename::String)
+    # reads the data from a csv file and returns an object Data
     data = CSV.File(filename,select=["growth_rate","generationtime","length_birth","division_ratio"]);
     div_ratio = convert(Array{Float64},vcat(data.division_ratio[2:end],mean(data.division_ratio[2:end])));
     return Data(data.generationtime,data.growth_rate,data.length_birth,div_ratio);
@@ -15,6 +16,7 @@ end
 
 
 function split_data(all::Data,test_size = 100)
+    # splits all data in training and testing data sets where test data has fixed size 100
     test_idx = sort(rand(1:length(all.time),test_size));
     train_idx = setdiff(1:length(all.time),test_idx);
     train = Data(all.time[train_idx],all.growth[train_idx],all.mass[train_idx],all.divratio[train_idx]);
@@ -24,6 +26,7 @@ end
 
 
 function remove_stuck_chain(chain,llhood,nwalk::Int64)
+    # takes the inference chain and removes chains where all entries are equal to the first one.
     bad_idx = []; 
     for k=1:nwalk
         if all(y -> y == first(chain[2,k,:]), chain[2,k,:])
@@ -37,6 +40,7 @@ end
 
 
 function bm_loglikeli(p::Vector,D::Data)
+    # log likelihood function of basic model
     # para = [o1,o2,u,v]
     if any(x -> x.<0,p)
         return -Inf
@@ -57,6 +61,7 @@ end
 
 
 function bm_logprior(p::Vector)
+    # log prior of basic model
     if p[3] > p[4]
         return -Inf
     else
@@ -66,6 +71,7 @@ end
 
 
 function vm_loglikeli(p::Vector,D::Data)
+    # log likelihood function of varying model
     # p = [o1,sig,b1,b2,o2,u,v]
     if any(x->x.<0,p)
         return -Inf
@@ -88,6 +94,7 @@ end
 
 
 function vm_logprior(p::Vector)
+    # log prior of varying model
     # p = [o1,sig,b1,b2,o2,u,v]
     if p[6] > p[7]
         return -Inf
@@ -98,6 +105,7 @@ end
 
 
 function pm_loglikeli(p::Vector,D::Data)
+    # og likelihood function of protein model
     # p = [o1,sig,b1,b2,o2,u,v]
     if any(x->x.<0,p)
         return -Inf
@@ -119,6 +127,7 @@ function pm_loglikeli(p::Vector,D::Data)
 end
 
 function pm_logprior(p::Vector)
+    # log prior of protein model
     # p = [o1,sig,b1,b2,o2,u,v]
     if p[6] > p[7]
         return -Inf
