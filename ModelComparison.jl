@@ -1,4 +1,4 @@
-using JLD2, Plots, StatsPlots, Distributions, Statistics, AffineInvariantMCMC, CSV, JLD2, DataFrames
+using JLD2, Plots, Roots, StatsPlots, Distributions, Statistics, AffineInvariantMCMC, CSV, JLD2, DataFrames
 
 struct Data
     time
@@ -294,7 +294,7 @@ pm_pd_mean = mean(deleteat!(pm_pd,findall(x->x<0,pm_pd))) # 240.854 / 232.833 / 
 const o1,o2,u,v = BMreal_flatchain[:,argmax(BMreal_flatllhood)];
 bm_gendata = basic_generate_data(2.6,2500);
 
-histogram([BMreal_data.time,gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.05:1.3)
+histogram([BMreal_data.time,bm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.1:1.3)
 
 
 ########## varying growth and division model forward simulation to compare data distributions
@@ -304,7 +304,7 @@ vm_gendata = varying_generate_data(2.6,2500);
 
 histogram([VMreal_data.growth,vm_gendata.growth],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.5:0.05:2.75)
 histogram([VMreal_data.divratio,vm_gendata.divratio],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.3:0.01:0.7)
-histogram([VMreal_data.time,vm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.05:1.6)
+histogram([VMreal_data.time,vm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.1:1.6)
 
 
 ########## protein model forward simulation to compare data distributions
@@ -314,4 +314,4 @@ pm_gendata = protein_generate_data(2.6,2500);
 
 histogram([PMreal_data.growth,pm_gendata.growth],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.5:0.05:2.75)
 histogram([PMreal_data.divratio,pm_gendata.divratio],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0.3:0.01:0.7)
-histogram([PMreal_data.time,pm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.025:1.6)
+histogram([PMreal_data.time,pm_gendata.time],label=["real world" "simulated"],normalize=true,fillalpha=0.4,fillcolor=[:blue :green],bins=0:0.1:1.6)
